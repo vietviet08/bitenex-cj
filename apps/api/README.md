@@ -13,39 +13,40 @@ FastAPI-based event collector and analytics API for customer journey tracking.
 
 ```
 apps/api/
-├── app/
-│   ├── api/                    # API routes
-│   │   ├── health.py           # Health check endpoints
-│   │   └── v1/                 # API v1 endpoints
-│   │       ├── events.py       # POST /v1/events
-│   │       ├── identify.py     # POST /v1/identify
-│   │       └── analytics.py    # Timeline, funnel, segment endpoints
-│   ├── core/                   # Core utilities
-│   │   ├── config.py           # Pydantic settings
-│   │   ├── security.py         # JWT auth and RBAC
-│   │   └── exceptions.py       # Custom exceptions
-│   ├── db/                     # Database connections
-│   │   ├── postgres.py         # SQLAlchemy async session
-│   │   ├── clickhouse.py       # ClickHouse client
-│   │   └── redis.py            # Redis client and event queue
-│   ├── models/                 # SQLAlchemy ORM models
-│   │   ├── user.py
-│   │   ├── identity.py
-│   │   ├── segment.py
-│   │   └── workflow.py
-│   ├── schemas/                # Pydantic schemas
-│   │   ├── events.py
-│   │   ├── identity.py
-│   │   └── analytics.py
-│   ├── services/               # Business logic
-│   │   ├── event_service.py
-│   │   ├── identity_service.py
-│   │   └── analytics_service.py
-│   └── main.py                 # FastAPI application
-├── migrations/                 # Alembic migrations
-├── tests/                      # Test suite
-├── pyproject.toml              # Project dependencies
-└── .env.example                # Environment template
+|-- app/
+|   |-- api/                     # API routes
+|   |   |-- health.py            # Health check endpoints
+|   |   `-- v1/                  # API v1 endpoints
+|   |       |-- events.py        # POST /v1/events
+|   |       |-- identify.py      # POST /v1/identify
+|   |       `-- analytics.py     # Timeline, funnel, segment endpoints
+|   |-- core/                    # Core utilities
+|   |   |-- config.py            # Pydantic settings
+|   |   |-- security.py          # JWT auth and RBAC
+|   |   `-- exceptions.py        # Custom exceptions
+|   |-- db/                      # Database connections
+|   |   |-- postgres.py          # SQLAlchemy async session
+|   |   |-- clickhouse.py        # ClickHouse client
+|   |   `-- redis.py             # Redis client and event queue
+|   |-- models/                  # SQLAlchemy ORM models
+|   |   |-- user.py
+|   |   |-- identity.py
+|   |   |-- segment.py
+|   |   `-- workflow.py
+|   |-- schemas/                 # Pydantic schemas
+|   |   |-- events.py
+|   |   |-- identity.py
+|   |   `-- analytics.py
+|   |-- services/                # Business logic
+|   |   |-- event_service.py
+|   |   |-- identity_service.py
+|   |   `-- analytics_service.py
+|   `-- main.py                  # FastAPI application
+|-- migrations/                  # Alembic migrations
+|-- tests/                       # Test suite
+|-- pyproject.toml               # Project metadata
+|-- requirements.txt             # Dependencies for Docker/CI
+`-- .env.example                 # Environment template
 ```
 
 ## Quick Start
@@ -55,17 +56,31 @@ apps/api/
    cp .env.example .env
    ```
 
-2. Install dependencies:
+2. Create a virtual environment:
    ```bash
-   pip install -e ".[dev]"
+   python -m venv .venv
    ```
 
-3. Start the API:
+3. Activate the virtual environment:
+   ```bash
+   # PowerShell
+   .\.venv\Scripts\Activate.ps1
+
+   # bash
+   source .venv/bin/activate
+   ```
+
+4. Install dependencies (from requirements.txt):
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. Start the API:
    ```bash
    uvicorn app.main:app --reload --port 8000
    ```
 
-4. Open API docs:
+6. Open API docs:
    - Swagger UI: http://localhost:8000/docs
    - ReDoc: http://localhost:8000/redoc
 
