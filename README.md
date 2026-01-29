@@ -1,6 +1,33 @@
 # Customer Journey Tracking & Automation Platform (MVP)
 
-A lightweight platform to capture user events, resolve identities, analyze journeys (timeline/funnel/retention), and trigger automations (abandoned cart, onboarding, churn warning). Built around a Web Tracking SDK, a FastAPI Event Collector, Postgres + ClickHouse storage, n8n workflows, and a Next.js dashboard.
+A lightweight platform to capture user events, resolve identities, analyze journeys (timeline, funnel, retention), and trigger automations (abandoned cart, onboarding, churn warning). Built around a Web Tracking SDK, a FastAPI Event Collector, Postgres + ClickHouse storage, n8n workflows, and a Next.js dashboard.
+
+## Quick Start (5 minutes)
+
+```
+# 1) Create env files from the snippets in the Environment Variables section
+
+# 2) Start infra
+Docker compose -f infra/docker-compose/docker-compose.yml up -d
+
+# 3) Run Postgres migrations
+cd apps/api
+alembic upgrade head
+
+# 4) Start API
+uvicorn app.main:app --reload --port 8000
+
+# 5) Start Web (new terminal)
+cd ../web
+pnpm install
+pnpm dev
+
+# 6) Send a test event (new terminal)
+curl -X POST http://localhost:8000/v1/events \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: test-evt-0001" \
+  -d '{"event_id":"b7f9dd2d-3a9c-4e7d-9f18-2e8f8c5f7e6a","event_name":"add_to_cart","timestamp":"2026-01-29T14:05:12Z","anonymous_id":"anon_8a9d8f4f","user_id":"f9c6e2b0-2a28-4d54-95a1-2d7e8e2d3a10","session_id":"sess_001","context":{"user_agent":"Mozilla/5.0","page_url":"https://shop.example.com/product/sku-123","referrer":"https://google.com","locale":"en-US","tz":"UTC+07:00"},"properties":{"sku":"sku-123","price":29.99,"currency":"USD","quantity":1}}'
+```
 
 ## Architecture
 
@@ -110,7 +137,7 @@ N8N_WEBHOOK_URL=http://localhost:5678
 From the repo root:
 
 ```
-docker compose -f infra/docker-compose/docker-compose.yml up -d
+Docker compose -f infra/docker-compose/docker-compose.yml up -d
 ```
 
 Then:
@@ -136,33 +163,38 @@ pnpm build
 
 n8n is included in the Compose stack and runs at `http://localhost:5678`.
 
+## ClickHouse Initialization
+
+ClickHouse tables are created via init SQL scripts mounted by Docker Compose or by a dedicated setup step in the API. Alembic only manages Postgres schemas. Ensure ClickHouse tables exist before sending high-volume events.
+
 ## Running Services
 
-- **API**: `http://localhost:8000`
-- **Web Dashboard**: `http://localhost:3000`
-- **n8n**: `http://localhost:5678`
+- API: `http://localhost:8000`
+- Web Dashboard: `http://localhost:3000`
+- n8n: `http://localhost:5678`
 
 ## API Endpoints (MVP)
 
-- `POST /v1/events` � Ingest single/batch events (requires `Idempotency-Key` header)
-- `POST /v1/identify` � Link identity attributes to `anonymous_id`
-- `GET /v1/users/{id}/timeline` � User journey timeline
-- `GET /v1/funnels` � Funnel analytics
-- `GET /v1/segments/preview` � Segment membership preview
+- `POST /v1/events` - Ingest single or batch events (requires `Idempotency-Key` header)
+- `POST /v1/identify` - Link identity attributes to `anonymous_id`
+- `GET /v1/users/{id}/timeline` - User journey timeline
+- `GET /v1/funnels?from=2026-01-01&to=2026-01-31&steps=page_view,add_to_cart,purchase_success` - Funnel analytics
+- `POST /v1/segments/preview` - Segment membership preview
 
 ## Sample Event Payload
+
+Event names use snake_case, for example: `page_view`, `sign_up`, `add_to_cart`, `begin_checkout`, `purchase_success`.
 
 ```json
 {
   "event_id": "f2a1c7c0-9f2c-4c62-9c4a-5a4f9b6d9e7b",
-  "event_name": "cart.add",
+  "event_name": "add_to_cart",
   "timestamp": "2026-01-29T14:05:12Z",
   "anonymous_id": "anon_8a9d8f4f",
-  "user_id": "user_123",
+  "user_id": "f9c6e2b0-2a28-4d54-95a1-2d7e8e2d3a10",
   "session_id": "sess_001",
   "context": {
     "user_agent": "Mozilla/5.0",
-    "ip": "203.0.113.10",
     "page_url": "https://shop.example.com/product/sku-123",
     "referrer": "https://google.com",
     "locale": "en-US",
@@ -177,6 +209,8 @@ n8n is included in the Compose stack and runs at `http://localhost:5678`.
 }
 ```
 
+Note: IP is derived server-side from request headers, not sent by the SDK.
+
 ## Identity Resolution (How it Works)
 
 - Every event must include `anonymous_id`.
@@ -184,34 +218,42 @@ n8n is included in the Compose stack and runs at `http://localhost:5678`.
 - When a match occurs, profiles are merged in Postgres and future events map to the resolved identity.
 - Timeline and analytics queries use the resolved user identity for consistent journeys.
 
+## End-to-End Test (curl)
+
+```
+curl -X POST http://localhost:8000/v1/events \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: test-evt-0002" \
+  -d '{"event_id":"2efcab1c-1f7f-4b87-a6b3-1e7e8f2b0b5a","event_name":"page_view","timestamp":"2026-01-29T14:06:12Z","anonymous_id":"anon_8a9d8f4f","context":{"user_agent":"Mozilla/5.0","page_url":"https://shop.example.com/","referrer":"https://google.com","locale":"en-US","tz":"UTC+07:00"},"properties":{"path":"/"}}'
+```
+
 ## n8n Workflows (Sample)
 
 Recommended location for workflow JSONs: `docs/n8n/`.
 
 Import and run:
 1. Open n8n at `http://localhost:5678`
-2. Click **Import** ? upload a JSON workflow from `docs/n8n/`
+2. Click Import -> upload a JSON workflow from `docs/n8n/`
 3. Configure credentials (SMTP, Twilio, internal API keys)
 4. Enable workflow and trigger with webhook or cron
 
 Common samples:
-- Abandoned cart reminder (webhook ? delay ? email/SMS)
-- Onboarding sequence (cron ? segment query ? email series)
-- Churn warning (segment preview ? CRM update)
+- Abandoned cart reminder (webhook -> delay -> email/SMS)
+- Onboarding sequence (cron -> segment query -> email series)
+- Churn warning (segment preview -> CRM update)
 
 ## Troubleshooting
 
-- **Events not appearing**: check Redis Streams length and ClickHouse connectivity; verify `Idempotency-Key`.
-- **401 Unauthorized**: ensure JWT secret and token issuer are aligned across API and web.
-- **No timeline data**: confirm identity resolution and that `anonymous_id` is present.
-- **n8n webhooks fail**: verify `N8N_WEBHOOK_URL` and exposed ports.
-- **ClickHouse errors**: confirm database and table creation during migrations.
+- Events not appearing: check Redis Streams length and ClickHouse connectivity; verify `Idempotency-Key`.
+- 401 Unauthorized: ensure JWT secret and token issuer are aligned across API and web.
+- No timeline data: confirm identity resolution and that `anonymous_id` is present.
+- n8n webhooks fail: verify `N8N_WEBHOOK_URL` and exposed ports.
+- ClickHouse errors: confirm database and table creation during initialization.
 
 ## Deployment Notes (MVP)
 
 - Use Docker Compose for a single-node deployment.
-- Back up Postgres (profiles/segments/workflows) and ClickHouse (events).
+- Back up Postgres (profiles, segments, workflows) and ClickHouse (events).
 - Configure retention via `EVENT_RETENTION_DAYS` and periodic cleanup jobs.
 - Put the API and n8n behind a reverse proxy with TLS in production.
 - Scale ingest by adding more API workers and Redis Streams consumers.
-```
