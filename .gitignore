@@ -1,7 +1,11 @@
 .agent
+.agents
+.codex
 .cursor
 .gemini
 .opencode
 .github/prompts
+.github/skills
+skills
 openspec
 AGENTS.md
