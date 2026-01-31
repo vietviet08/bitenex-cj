@@ -34,7 +34,7 @@ class Identity(Base, UUIDMixin):
     )
 
     # Relationships
-    user: Mapped["User | None"] = relationship(  # noqa: F821
+    user: Mapped["User | None"] = relationship(
         "User",
         back_populates="identities",
     )

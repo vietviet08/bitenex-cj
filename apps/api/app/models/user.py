@@ -15,7 +15,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     phone: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
 
     # Relationships
-    identities: Mapped[list["Identity"]] = relationship(  # noqa: F821
+    identities: Mapped[list["Identity"]] = relationship(
         "Identity",
         back_populates="user",
         lazy="selectin",
