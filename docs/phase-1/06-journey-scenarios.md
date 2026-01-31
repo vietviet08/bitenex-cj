@@ -1,5 +1,7 @@
 # Phase 1 - Journey Scenarios
 
+Note: Journeys can be triggered by events from both Web and React Native SDKs, as well as server-side events.
+
 ## Journey 1: Abandoned Cart
 
 Trigger condition

@@ -17,7 +17,7 @@ Minimal schema for MVP. Use Alembic for migrations.
 - user_id UUID NULL REFERENCES users(id)
 - email TEXT NULL
 - phone TEXT NULL
-- device_id TEXT NULL
+- device_id TEXT NULL (mobile or desktop device identifier)
 - first_seen_at TIMESTAMP WITH TIME ZONE NOT NULL
 - last_seen_at TIMESTAMP WITH TIME ZONE NOT NULL
 

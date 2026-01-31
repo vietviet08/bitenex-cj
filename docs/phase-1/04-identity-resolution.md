@@ -5,11 +5,12 @@
 - user_id: stable UUID for a known user.
 - email: optional login identifier (avoid in raw events).
 - phone: optional login identifier (avoid in raw events).
-- device_id: optional device identifier (mobile or desktop fingerprint).
+- device_id: optional device identifier (mobile or desktop fingerprint). For React Native, prefer a stable installation_id stored on device.
 
 ## Merge Rules
 - anonymous_id is required for all events.
 - POST /v1/identify links anonymous_id to user_id/email/phone/device_id.
+- React Native SDK should persist anonymous_id locally (e.g., AsyncStorage) to survive app restarts.
 - When identify is called, the system:
   - creates or updates the user record (users table)
   - upserts the mapping in identities table

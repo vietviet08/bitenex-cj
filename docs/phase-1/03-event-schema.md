@@ -19,12 +19,22 @@ Optional fields:
 
 ## Context Rules
 
-Required context fields:
+Required context fields (all events):
+- platform (web | mobile | server)
+- locale
+- tz
+
+Required context fields (web):
 - user_agent
 - page_url
 - referrer (can be empty string)
-- locale
-- tz
+
+Required context fields (mobile / React Native):
+- app_version
+- os_name
+- os_version
+- device_model
+- screen_name
 
 Notes:
 - Do not send IP from the SDK. IP is derived server-side from request headers.
@@ -59,6 +69,7 @@ Notes:
   "timestamp": "2026-01-29T14:06:12Z",
   "anonymous_id": "anon_8a9d8f4f",
   "context": {
+    "platform": "web",
     "user_agent": "Mozilla/5.0",
     "page_url": "https://shop.example.com/",
     "referrer": "https://google.com",
@@ -67,6 +78,30 @@ Notes:
   },
   "properties": {
     "path": "/"
+  }
+}
+```
+
+### screen_view
+
+```json
+{
+  "event_id": "8e3c1a2f-6b14-4a53-9e12-5f2b7d2a1c90",
+  "event_name": "screen_view",
+  "timestamp": "2026-01-29T14:07:05Z",
+  "anonymous_id": "anon_mobile_2c9e1d",
+  "context": {
+    "platform": "mobile",
+    "app_version": "1.4.0",
+    "os_name": "iOS",
+    "os_version": "17.2",
+    "device_model": "iPhone15,3",
+    "screen_name": "restaurant_detail",
+    "locale": "en-US",
+    "tz": "UTC+07:00"
+  },
+  "properties": {
+    "restaurant_id": "rest_001"
   }
 }
 ```
@@ -82,6 +117,7 @@ Notes:
   "user_id": "f9c6e2b0-2a28-4d54-95a1-2d7e8e2d3a10",
   "session_id": "sess_001",
   "context": {
+    "platform": "web",
     "user_agent": "Mozilla/5.0",
     "page_url": "https://shop.example.com/product/sku-123",
     "referrer": "https://google.com",
@@ -107,6 +143,7 @@ Notes:
   "anonymous_id": "anon_8a9d8f4f",
   "user_id": "f9c6e2b0-2a28-4d54-95a1-2d7e8e2d3a10",
   "context": {
+    "platform": "server",
     "user_agent": "Server",
     "page_url": "https://shop.example.com/checkout/success",
     "referrer": "",

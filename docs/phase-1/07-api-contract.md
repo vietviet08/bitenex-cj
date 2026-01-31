@@ -13,6 +13,8 @@
 - Write endpoints require operator or admin.
 - Analytics endpoints require analyst or admin.
 
+Events can be sent from Web SDK, React Native SDK, or server-side tracking.
+
 ## POST /v1/events
 
 Request (single event)
@@ -24,6 +26,7 @@ Request (single event)
   "timestamp": "2026-01-29T14:06:12Z",
   "anonymous_id": "anon_8a9d8f4f",
   "context": {
+    "platform": "web",
     "user_agent": "Mozilla/5.0",
     "page_url": "https://shop.example.com/",
     "referrer": "https://google.com",

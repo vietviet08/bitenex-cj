@@ -8,9 +8,14 @@
 
 ## Event Sources
 
-Frontend (Web SDK)
+Client (Web SDK)
 - Used for browser events such as page_view, add_to_cart, begin_checkout.
 - SDK can be embedded into any website, including Spring Boot + Thymeleaf pages.
+- SDK should not send raw IP; IP is derived server-side from request headers.
+
+Client (React Native SDK)
+- Used for mobile app events such as app_open, screen_view, add_to_cart, begin_checkout.
+- SDK is embedded into React Native apps for customer, merchant, and driver.
 - SDK should not send raw IP; IP is derived server-side from request headers.
 
 Backend (Server-side tracking)
@@ -21,15 +26,17 @@ Backend (Server-side tracking)
 
 | Event Name       | Source   | Required Properties                     | Notes |
 |-----------------|----------|------------------------------------------|-------|
-| page_view       | Frontend | path                                      | page view in the browser |
+| page_view       | Web      | path                                      | page view in the browser |
+| screen_view     | Mobile   | screen_name                               | screen view in the mobile app |
 | sign_up         | Backend  | method                                   | method = email, google, etc |
 | login           | Backend  | method                                   | used for identity linking |
-| add_to_cart     | Frontend | sku, price, currency, quantity           | capture item added |
-| begin_checkout  | Frontend | cart_value, currency                     | first checkout step |
+| add_to_cart     | Web/Mobile | sku, price, currency, quantity        | capture item added |
+| begin_checkout  | Web/Mobile | cart_value, currency                   | first checkout step |
 | purchase_success| Backend  | order_id, total, currency, item_count    | final purchase confirmation |
 
 ## Required Properties (Definitions)
 - path: URL path or route, e.g. "/pricing"
+- screen_name: app screen name, e.g. "restaurant_detail"
 - method: sign_up or login method, e.g. "email" or "google"
 - sku: product SKU
 - price: numeric unit price
