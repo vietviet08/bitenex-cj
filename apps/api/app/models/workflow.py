@@ -15,7 +15,9 @@ class Workflow(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "workflows"
 
     name: Mapped[str] = mapped_column(String, nullable=False)
-    type: Mapped[str] = mapped_column(String, nullable=False)  # abandoned_cart, onboarding, churn_warning
+    type: Mapped[str] = mapped_column(
+        String, nullable=False
+    )  # abandoned_cart, onboarding, churn_warning
     n8n_workflow_id: Mapped[str] = mapped_column(String, nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     config_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)

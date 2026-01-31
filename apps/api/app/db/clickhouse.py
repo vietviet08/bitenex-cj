@@ -20,7 +20,9 @@ def get_clickhouse_client() -> Client:
     )
 
 
-async def execute_query(query: str, parameters: dict[str, Any] | None = None) -> list[dict]:
+async def execute_query(
+    query: str, parameters: dict[str, Any] | None = None
+) -> list[dict]:
     """Execute a ClickHouse query and return results as list of dicts."""
     client = get_clickhouse_client()
     try:

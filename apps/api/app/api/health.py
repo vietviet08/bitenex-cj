@@ -1,9 +1,8 @@
 """Health check endpoints."""
 
+import redis
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-
-import redis
 
 from app.core.config import get_settings
 from app.schemas.common import HealthResponse

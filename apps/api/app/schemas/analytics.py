@@ -26,7 +26,9 @@ class FunnelRequest(BaseModel):
 
     from_date: date = Field(..., alias="from")
     to_date: date = Field(..., alias="to")
-    steps: list[str] = Field(..., min_length=2, description="Comma-separated event names")
+    steps: list[str] = Field(
+        ..., min_length=2, description="Comma-separated event names"
+    )
 
     class Config:
         populate_by_name = True

@@ -14,7 +14,9 @@ class Identity(Base, UUIDMixin):
 
     __tablename__ = "identities"
 
-    anonymous_id: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    anonymous_id: Mapped[str] = mapped_column(
+        String, unique=True, nullable=False, index=True
+    )
     user_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("users.id"),
@@ -24,8 +26,12 @@ class Identity(Base, UUIDMixin):
     email: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     phone: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     device_id: Mapped[str | None] = mapped_column(String, nullable=True)
-    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
     # Relationships
     user: Mapped["User | None"] = relationship(  # noqa: F821

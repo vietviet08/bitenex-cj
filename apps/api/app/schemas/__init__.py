@@ -1,12 +1,4 @@
 # Pydantic schemas for request/response validation
-from app.schemas.common import ErrorResponse, HealthResponse
-from app.schemas.events import (
-    EventContext,
-    EventCreate,
-    EventResponse,
-    EventsIngestResponse,
-)
-from app.schemas.identity import IdentifyRequest, IdentifyResponse
 from app.schemas.analytics import (
     FunnelRequest,
     FunnelResponse,
@@ -15,6 +7,14 @@ from app.schemas.analytics import (
     TimelineEvent,
     TimelineResponse,
 )
+from app.schemas.common import ErrorResponse, HealthResponse
+from app.schemas.events import (
+    EventContext,
+    EventCreate,
+    EventResponse,
+    EventsIngestResponse,
+)
+from app.schemas.identity import IdentifyRequest, IdentifyResponse
 
 __all__ = [
     "ErrorResponse",
