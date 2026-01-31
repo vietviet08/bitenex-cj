@@ -1,0 +1,523 @@
+{
+  "name": "Onboarding Sequence (Webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "onboarding",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "responseCode": 200
+      },
+      "id": "1",
+      "name": "Webhook Onboarding",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "language": "JavaScript",
+        "jsCode": "return items.map(item => {\n  const data = item.json;\n  if (!data.dedupe_key) {\n    const id = data.user_id || data.anonymous_id || 'unknown';\n    data.dedupe_key = `onboarding:${id}`;\n  }\n  if (!data.dedupe_ttl_seconds) data.dedupe_ttl_seconds = 31536000;\n  return item;\n});"
+      },
+      "id": "2",
+      "name": "Normalize Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "key": "={{$node[\"Normalize Payload\"].json[\"dedupe_key\"]}}"
+      },
+      "id": "3",
+      "name": "Redis Get Dedupe",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "redis": {
+          "id": "1",
+          "name": "Redis"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"value\"]}}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "Dedupe Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {},
+      "id": "5",
+      "name": "Stop (Already Sent)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1080, 200]
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "={{$node[\"Normalize Payload\"].json[\"dedupe_key\"]}}",
+        "value": "1",
+        "expire": "={{$node[\"Normalize Payload\"].json[\"dedupe_ttl_seconds\"] || 31536000}}"
+      },
+      "id": "6",
+      "name": "Redis Set Dedupe",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [1080, 400],
+      "credentials": {
+        "redis": {
+          "id": "1",
+          "name": "Redis"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT email, phone FROM users WHERE id = '{{$node[\"Normalize Payload\"].json[\"user_id\"]}}';"
+      },
+      "id": "7",
+      "name": "Lookup User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1290, 400],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"email\"]}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "8",
+      "name": "Has Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1500, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@example.com",
+        "toEmail": "={{$json[\"email\"]}}",
+        "subject": "Welcome to our service",
+        "text": "Thanks for signing up! Here are the next steps to get started."
+      },
+      "id": "9",
+      "name": "Send Welcome Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1710, 240],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "waitType": "timeInterval",
+        "timeInterval": {
+          "unit": "days",
+          "value": 1
+        }
+      },
+      "id": "10",
+      "name": "Wait 1 Day (Email)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1920, 240]
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@example.com",
+        "toEmail": "={{$json[\"email\"]}}",
+        "subject": "Tips to get started",
+        "text": "Here are a few tips to help you complete your first order."
+      },
+      "id": "11",
+      "name": "Send Tips Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [2130, 240],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "waitType": "timeInterval",
+        "timeInterval": {
+          "unit": "days",
+          "value": 3
+        }
+      },
+      "id": "12",
+      "name": "Wait 3 Days (Email)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2340, 240]
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@example.com",
+        "toEmail": "={{$json[\"email\"]}}",
+        "subject": "Complete your first order",
+        "text": "Need help completing your first order? We're here to help."
+      },
+      "id": "13",
+      "name": "Send Reminder Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [2550, 240],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"phone\"]}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "14",
+      "name": "Has Phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1710, 520]
+    },
+    {
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "+10000000000",
+        "to": "={{$json[\"phone\"]}}",
+        "message": "Welcome! Let's get your first order started."
+      },
+      "id": "15",
+      "name": "Send Welcome SMS",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [1920, 520],
+      "credentials": {
+        "twilioApi": {
+          "id": "1",
+          "name": "Twilio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "waitType": "timeInterval",
+        "timeInterval": {
+          "unit": "days",
+          "value": 1
+        }
+      },
+      "id": "16",
+      "name": "Wait 1 Day (SMS)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2130, 520]
+    },
+    {
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "+10000000000",
+        "to": "={{$json[\"phone\"]}}",
+        "message": "Tip: Save your favorite restaurants for faster reorders."
+      },
+      "id": "17",
+      "name": "Send Tips SMS",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [2340, 520],
+      "credentials": {
+        "twilioApi": {
+          "id": "1",
+          "name": "Twilio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "waitType": "timeInterval",
+        "timeInterval": {
+          "unit": "days",
+          "value": 3
+        }
+      },
+      "id": "18",
+      "name": "Wait 3 Days (SMS)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2550, 520]
+    },
+    {
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "+10000000000",
+        "to": "={{$json[\"phone\"]}}",
+        "message": "Need help completing your first order? Reply to this message."
+      },
+      "id": "19",
+      "name": "Send Reminder SMS",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [2760, 520],
+      "credentials": {
+        "twilioApi": {
+          "id": "1",
+          "name": "Twilio"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "20",
+      "name": "Stop (No Contact)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1920, 700]
+    }
+  ],
+  "connections": {
+    "Webhook Onboarding": {
+      "main": [
+        [
+          {
+            "node": "Normalize Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Payload": {
+      "main": [
+        [
+          {
+            "node": "Redis Get Dedupe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Get Dedupe": {
+      "main": [
+        [
+          {
+            "node": "Dedupe Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dedupe Exists?": {
+      "main": [
+        [
+          {
+            "node": "Redis Set Dedupe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop (Already Sent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Set Dedupe": {
+      "main": [
+        [
+          {
+            "node": "Lookup User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup User": {
+      "main": [
+        [
+          {
+            "node": "Has Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Email?": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Phone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Wait 1 Day (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1 Day (Email)": {
+      "main": [
+        [
+          {
+            "node": "Send Tips Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Tips Email": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 Days (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 Days (Email)": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Phone?": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome SMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop (No Contact)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome SMS": {
+      "main": [
+        [
+          {
+            "node": "Wait 1 Day (SMS)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1 Day (SMS)": {
+      "main": [
+        [
+          {
+            "node": "Send Tips SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Tips SMS": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 Days (SMS)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 Days (SMS)": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}
