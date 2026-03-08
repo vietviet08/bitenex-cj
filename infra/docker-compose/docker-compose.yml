@@ -61,6 +61,11 @@ services:
       - n8n_data:/home/node/.n8n
     restart: unless-stopped
 
+  burndown-render:
+    image: vietquoc2408/burndown-render:latest
+    ports:
+      - "8088:8088"
+
 volumes:
   postgres_data:
   clickhouse_data:
