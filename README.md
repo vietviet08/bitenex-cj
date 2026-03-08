@@ -232,14 +232,19 @@ curl -X POST http://localhost:8000/v1/events \
 Recommended location for workflow JSONs: `docs/n8n/`.
 
 Import and run:
+
 1. Open n8n at `http://localhost:5678`
 2. Click Import -> upload a JSON workflow from `docs/n8n/`
 3. Configure credentials (SMTP, Twilio, internal API keys)
 4. Enable workflow and trigger with webhook or cron
 
 Common samples:
-- Abandoned cart reminder (webhook -> delay -> email/SMS)
-- Onboarding sequence (cron -> segment query -> email series)
+
+- Onboarding to first order (webhook -> first-order check -> welcome nudge -> voucher)
+- Abandoned checkout recovery (webhook -> delay -> recovery reminder -> offer)
+- Delivered to review and reorder (delivered event -> review request -> reorder offer)
+- Abandoned cart reminder (generic sample)
+- Onboarding sequence (generic sample)
 - Churn warning (segment preview -> CRM update)
 
 ## Troubleshooting
