@@ -1,0 +1,297 @@
+{
+    "name": "Bitenex - Abandoned Checkout Recovery",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "bitenex/abandoned-checkout-recovery",
+                "httpMethod": "POST",
+                "responseMode": "onReceived",
+                "options": {}
+            },
+            "id": "1",
+            "name": "Webhook Checkout Started",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                -920,
+                100
+            ],
+            "webhookId": "bitenex-abandoned-checkout-recovery"
+        },
+        {
+            "parameters": {
+                "keepOnlySet": false,
+                "values": {
+                    "string": [
+                        {
+                            "name": "customerId",
+                            "value": "={{$json.body?.customerId || $json.customerId}}"
+                        },
+                        {
+                            "name": "checkoutSessionId",
+                            "value": "={{$json.body?.checkoutSessionId || $json.checkoutSessionId}}"
+                        },
+                        {
+                            "name": "merchantName",
+                            "value": "={{$json.body?.merchantName || $json.merchantName || 'Bitenex'}}"
+                        },
+                        {
+                            "name": "deepLink",
+                            "value": "={{$json.body?.deepLink || 'bitenex://checkout'}}"
+                        },
+                        {
+                            "name": "currency",
+                            "value": "={{$json.body?.currency || $json.currency || 'VND'}}"
+                        }
+                    ],
+                    "number": [
+                        {
+                            "name": "cartValue",
+                            "value": "={{$json.body?.cartValue || $json.cartValue || 0}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "2",
+            "name": "Set Checkout Context",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                -680,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "resume": "timeInterval",
+                "amount": 30,
+                "unit": "minutes"
+            },
+            "id": "3",
+            "name": "Wait 30 Minutes",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1,
+            "position": [
+                -440,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{$env.BITENEX_API_BASE_URL + '/internal/journeys/checkouts/' + $node[\"Set Checkout Context\"].json[\"checkoutSessionId\"] + '/status'}}",
+                "options": {}
+            },
+            "id": "4",
+            "name": "Check Checkout Status",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                -200,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "if ($json.hasOrderCreated === true || $json.paymentCompleted === true || $json.checkoutRecovered === true) {\n  return [];\n}\nreturn items;"
+            },
+            "id": "5",
+            "name": "Filter Abandoned Checkout",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                40,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{$env.BITENEX_API_BASE_URL + '/internal/notifications/push'}}",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ { userId: $node[\"Set Checkout Context\"].json[\"customerId\"], template: 'abandoned_checkout_30m', channels: ['push'], data: { merchantName: $node[\"Set Checkout Context\"].json[\"merchantName\"], cartValue: $node[\"Set Checkout Context\"].json[\"cartValue\"], currency: $node[\"Set Checkout Context\"].json[\"currency\"], deepLink: $node[\"Set Checkout Context\"].json[\"deepLink\"] } } }}",
+                "options": {}
+            },
+            "id": "6",
+            "name": "Send Checkout Reminder",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                280,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "resume": "timeInterval",
+                "amount": 2,
+                "unit": "hours"
+            },
+            "id": "7",
+            "name": "Wait 2 Hours",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1,
+            "position": [
+                520,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{$env.BITENEX_API_BASE_URL + '/internal/journeys/checkouts/' + $node[\"Set Checkout Context\"].json[\"checkoutSessionId\"] + '/status'}}",
+                "options": {}
+            },
+            "id": "8",
+            "name": "Recheck Checkout Status",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                760,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "if ($json.hasOrderCreated === true || $json.paymentCompleted === true || $json.checkoutRecovered === true) {\n  return [];\n}\nreturn items;"
+            },
+            "id": "9",
+            "name": "Filter Still Abandoned",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1000,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{$env.BITENEX_API_BASE_URL + '/internal/marketing/issue-voucher'}}",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ { userId: $node[\"Set Checkout Context\"].json[\"customerId\"], campaign: 'checkout_recovery', offerType: 'small_discount', metadata: { checkoutSessionId: $node[\"Set Checkout Context\"].json[\"checkoutSessionId\"], cartValue: $node[\"Set Checkout Context\"].json[\"cartValue\"] }, notification: { channels: ['push', 'email'], template: 'checkout_recovery_offer', data: { merchantName: $node[\"Set Checkout Context\"].json[\"merchantName\"], deepLink: $node[\"Set Checkout Context\"].json[\"deepLink\"] } } } }}",
+                "options": {}
+            },
+            "id": "10",
+            "name": "Issue Recovery Offer",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1240,
+                100
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Checkout Started": {
+            "main": [
+                [
+                    {
+                        "node": "Set Checkout Context",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set Checkout Context": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 30 Minutes",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait 30 Minutes": {
+            "main": [
+                [
+                    {
+                        "node": "Check Checkout Status",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Checkout Status": {
+            "main": [
+                [
+                    {
+                        "node": "Filter Abandoned Checkout",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Filter Abandoned Checkout": {
+            "main": [
+                [
+                    {
+                        "node": "Send Checkout Reminder",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Checkout Reminder": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 2 Hours",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait 2 Hours": {
+            "main": [
+                [
+                    {
+                        "node": "Recheck Checkout Status",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Recheck Checkout Status": {
+            "main": [
+                [
+                    {
+                        "node": "Filter Still Abandoned",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Filter Still Abandoned": {
+            "main": [
+                [
+                    {
+                        "node": "Issue Recovery Offer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "active": false,
+    "settings": {},
+    "versionId": "abandoned-checkout-recovery-v1",
+    "meta": {
+        "templateCredsSetupCompleted": false
+    },
+    "id": "customer-journey-bitenex-workflow-02"
+}
