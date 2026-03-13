@@ -1,72 +1,72 @@
 services:
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
+    redis:
+        image: redis:7-alpine
+        ports:
+            - "6379:6379"
+        restart: unless-stopped
 
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
+    postgres:
+        image: postgres:16-alpine
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        restart: unless-stopped
 
-  clickhouse:
-    image: clickhouse/clickhouse-server:23.8
-    environment:
-      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
-    ports:
-      - "8123:8123"
-      - "9000:9000"
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-    profiles:
-      - optional
-    restart: unless-stopped
+    clickhouse:
+        image: clickhouse/clickhouse-server:23.8
+        environment:
+            CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+            CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+            CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+        ports:
+            - "8123:8123"
+            - "9000:9000"
+        volumes:
+            - clickhouse_data:/var/lib/clickhouse
+        profiles:
+            - optional
+        restart: unless-stopped
 
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: n8n
-    ports:
-      - "5678:5678"
-    environment:
-      # Basic Auth (khuyến nghị bật khi expose ra internet)
-      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE}
-      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
-      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
+    n8n:
+        image: n8nio/n8n:latest
+        container_name: n8n
+        ports:
+            - "5678:5678"
+        environment:
+            # Basic Auth (khuyến nghị bật khi expose ra internet)
+            N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE}
+            N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
+            N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
 
-      # Public URL (ngrok)
-      N8N_HOST: ${N8N_HOST}
-      N8N_PORT: 5678
-      N8N_PROTOCOL: ${N8N_PROTOCOL}
+            # Public URL (ngrok)
+            # N8N_HOST: ${N8N_HOST}
+            # N8N_PORT: 5678
+            # N8N_PROTOCOL: ${N8N_PROTOCOL}
 
-      # Webhook URL (quan trọng nhất để GitHub gọi đúng)
-      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL}
-      WEBHOOK_URL: ${N8N_WEBHOOK_URL}
+            # Webhook URL (quan trọng nhất để GitHub gọi đúng)
+            # N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL}
+            # WEBHOOK_URL: ${N8N_WEBHOOK_URL}
 
-      # Timezone
-      GENERIC_TIMEZONE: ${N8N_TIMEZONE}
-      TZ: ${N8N_TIMEZONE}
-      # (Tuỳ chọn) log dễ debug hơn
-      N8N_LOG_LEVEL: info
-    volumes:
-      - n8n_data:/home/node/.n8n
-    restart: unless-stopped
+            # Timezone
+            GENERIC_TIMEZONE: ${N8N_TIMEZONE}
+            TZ: ${N8N_TIMEZONE}
+            # (Tuỳ chọn) log dễ debug hơn
+            N8N_LOG_LEVEL: info
+        volumes:
+            - n8n_data:/home/node/.n8n
+        restart: unless-stopped
 
-  burndown-render:
-    image: vietquoc2408/burndown-render:latest
-    ports:
-      - "8088:8088"
+    burndown-render:
+        image: vietquoc2408/burndown-render:latest
+        ports:
+            - "8088:8088"
 
 volumes:
-  postgres_data:
-  clickhouse_data:
-  n8n_data:
+    postgres_data:
+    clickhouse_data:
+    n8n_data:
