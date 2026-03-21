@@ -44,13 +44,13 @@ services:
             N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
 
             # Public URL (ngrok)
-            # N8N_HOST: ${N8N_HOST}
-            # N8N_PORT: 5678
-            # N8N_PROTOCOL: ${N8N_PROTOCOL}
+            N8N_HOST: ${N8N_HOST}
+            N8N_PORT: 5678
+            N8N_PROTOCOL: ${N8N_PROTOCOL}
 
             # Webhook URL (quan trọng nhất để GitHub gọi đúng)
-            # N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL}
-            # WEBHOOK_URL: ${N8N_WEBHOOK_URL}
+            N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL}
+            WEBHOOK_URL: ${N8N_WEBHOOK_URL}
 
             # Timezone
             GENERIC_TIMEZONE: ${N8N_TIMEZONE}
