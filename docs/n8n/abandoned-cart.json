@@ -1,344 +1,419 @@
 {
-  "name": "Abandoned Cart Reminder (Webhook)",
-  "nodes": [
-    {
-      "parameters": {
-        "path": "abandoned-cart",
-        "httpMethod": "POST",
-        "responseMode": "onReceived",
-        "responseCode": 200
-      },
-      "id": "1",
-      "name": "Webhook Abandoned Cart",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [200, 300]
-    },
-    {
-      "parameters": {
-        "language": "JavaScript",
-        "jsCode": "return items.map(item => {\n  const data = item.json;\n  if (!data.dedupe_key) {\n    const id = data.user_id || data.anonymous_id || 'unknown';\n    const date = (data.event_time || data.timestamp || new Date().toISOString()).slice(0, 10);\n    data.dedupe_key = `abandoned_cart:${id}:${date}`;\n  }\n  if (!data.dedupe_ttl_seconds) data.dedupe_ttl_seconds = 86400;\n  return item;\n});"
-      },
-      "id": "2",
-      "name": "Normalize Payload",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [420, 300]
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "key": "={{$node[\"Normalize Payload\"].json[\"dedupe_key\"]}}"
-      },
-      "id": "3",
-      "name": "Redis Get Dedupe",
-      "type": "n8n-nodes-base.redis",
-      "typeVersion": 1,
-      "position": [650, 300],
-      "credentials": {
-        "redis": {
-          "id": "1",
-          "name": "Redis"
+    "name": "Bitenex - Abandoned Cart Recovery",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "cart-abandoned",
+                "httpMethod": "POST",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "1",
+            "name": "Cart Abandoned Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [260, 300],
+            "webhookId": "bitenex-cart-abandoned-webhook"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{$json.body?.properties?.restaurant_open ?? $json.body?.restaurant_open ?? $json.body?.restaurantOpen ?? $json.properties?.restaurant_open ?? $json.restaurant_open ?? $json.restaurantOpen ?? false}}",
+                            "operation": "isTrue"
+                        },
+                        {
+                            "value1": "={{$json.body?.properties?.items_available ?? $json.body?.items_available ?? $json.body?.itemsAvailable ?? $json.properties?.items_available ?? $json.items_available ?? $json.itemsAvailable ?? false}}",
+                            "operation": "isTrue"
+                        }
+                    ]
+                }
+            },
+            "id": "2",
+            "name": "Cart Still Actionable?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [500, 300]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000/api/v1') + '/internal/journeys/abandoned-carts/status'}}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'REPLACE_WITH_BITENEX_INTERNAL_TOKEN')}}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"journey\": \"abandoned_cart_recovery\",\n  \"trigger_event\": {{$node[\"Cart Abandoned Webhook\"].json.body?.trigger_event ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.trigger_event) : '\"cart_abandoned\"'}},\n  \"event_time\": {{$node[\"Cart Abandoned Webhook\"].json.body?.event_time ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.event_time) : 'null'}},\n  \"user_id\": {{$node[\"Cart Abandoned Webhook\"].json.body?.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.user_id) : $node[\"Cart Abandoned Webhook\"].json.body?.userId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.userId) : $node[\"Cart Abandoned Webhook\"].json.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.user_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.userId)}},\n  \"cart_id\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.properties.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cartId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cartId) : $node[\"Cart Abandoned Webhook\"].json.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cart_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cartId)}},\n  \"dedupe_key\": {{$node[\"Cart Abandoned Webhook\"].json.body?.dedupe_key ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.dedupe_key) : JSON.stringify('abandoned_cart:' + ($node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id || $node[\"Cart Abandoned Webhook\"].json.body?.cart_id || $node[\"Cart Abandoned Webhook\"].json.body?.cartId || $node[\"Cart Abandoned Webhook\"].json.cart_id || $node[\"Cart Abandoned Webhook\"].json.cartId || 'unknown'))}},\n  \"check_phase\": \"initial\",\n  \"properties\": {\n    \"cart_value\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.body?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.body?.cartValue ?? $node[\"Cart Abandoned Webhook\"].json.properties?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.cartValue ?? 0}},\n    \"restaurant_open\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.restaurant_open ?? $node[\"Cart Abandoned Webhook\"].json.body?.restaurant_open ?? $node[\"Cart Abandoned Webhook\"].json.body?.restaurantOpen ?? $node[\"Cart Abandoned Webhook\"].json.properties?.restaurant_open ?? $node[\"Cart Abandoned Webhook\"].json.restaurant_open ?? $node[\"Cart Abandoned Webhook\"].json.restaurantOpen ?? false}},\n    \"items_available\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.items_available ?? $node[\"Cart Abandoned Webhook\"].json.body?.items_available ?? $node[\"Cart Abandoned Webhook\"].json.body?.itemsAvailable ?? $node[\"Cart Abandoned Webhook\"].json.properties?.items_available ?? $node[\"Cart Abandoned Webhook\"].json.items_available ?? $node[\"Cart Abandoned Webhook\"].json.itemsAvailable ?? false}}\n  }\n}"
+            },
+            "id": "3",
+            "name": "Check Cart Recovery Status 1",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [760, 220]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{$json.has_converted ?? false}}",
+                            "operation": "isFalse"
+                        }
+                    ]
+                }
+            },
+            "id": "4",
+            "name": "Still Abandoned After 30m?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [1000, 220]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000/api/v1') + '/notifications/broadcast'}}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'REPLACE_WITH_BITENEX_INTERNAL_TOKEN')}}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"user_ids\": [{{$node[\"Cart Abandoned Webhook\"].json.body?.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.user_id) : $node[\"Cart Abandoned Webhook\"].json.body?.userId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.userId) : $node[\"Cart Abandoned Webhook\"].json.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.user_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.userId)}}],\n  \"type\": \"PROMOTION\",\n  \"title\": \"Bạn quên hoàn tất đơn hàng\",\n  \"body\": \"Giỏ hàng của bạn vẫn đang chờ. Hoàn tất đơn ngay để món ngon không bị hết nhé!\",\n  \"data\": {\n    \"journey\": \"abandoned_cart_recovery\",\n    \"cart_id\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.properties.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cartId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cartId) : $node[\"Cart Abandoned Webhook\"].json.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cart_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cartId)}},\n    \"deep_link\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.deep_link ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.properties.deep_link) : JSON.stringify('bitenex://cart/' + ($node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id || $node[\"Cart Abandoned Webhook\"].json.body?.cart_id || $node[\"Cart Abandoned Webhook\"].json.body?.cartId || $node[\"Cart Abandoned Webhook\"].json.cart_id || $node[\"Cart Abandoned Webhook\"].json.cartId || 'unknown'))}},\n    \"reminder_stage\": 1\n  }\n}"
+            },
+            "id": "5",
+            "name": "Send Push Reminder 1",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [1250, 220]
+        },
+        {
+            "parameters": {
+                "amount": 2,
+                "unit": "hours"
+            },
+            "id": "6",
+            "name": "Wait 2 Hours",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [1490, 220]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000/api/v1') + '/internal/journeys/abandoned-carts/status'}}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'REPLACE_WITH_BITENEX_INTERNAL_TOKEN')}}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"journey\": \"abandoned_cart_recovery\",\n  \"trigger_event\": \"cart_abandoned\",\n  \"user_id\": {{$node[\"Cart Abandoned Webhook\"].json.body?.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.user_id) : $node[\"Cart Abandoned Webhook\"].json.body?.userId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.userId) : $node[\"Cart Abandoned Webhook\"].json.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.user_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.userId)}},\n  \"cart_id\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.properties.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cartId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cartId) : $node[\"Cart Abandoned Webhook\"].json.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cart_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cartId)}},\n  \"dedupe_key\": {{$node[\"Cart Abandoned Webhook\"].json.body?.dedupe_key ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.dedupe_key) : JSON.stringify('abandoned_cart:' + ($node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id || $node[\"Cart Abandoned Webhook\"].json.body?.cart_id || $node[\"Cart Abandoned Webhook\"].json.body?.cartId || $node[\"Cart Abandoned Webhook\"].json.cart_id || $node[\"Cart Abandoned Webhook\"].json.cartId || 'unknown'))}},\n  \"check_phase\": \"follow_up\",\n  \"properties\": {\n    \"cart_value\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.body?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.body?.cartValue ?? $node[\"Cart Abandoned Webhook\"].json.properties?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.cartValue ?? 0}}\n  }\n}"
+            },
+            "id": "7",
+            "name": "Check Cart Recovery Status 2",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [1730, 220]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{$json.has_converted ?? false}}",
+                            "operation": "isFalse"
+                        }
+                    ]
+                }
+            },
+            "id": "8",
+            "name": "Still Abandoned After 2h?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [1970, 220]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "number": [
+                        {
+                            "value1": "={{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.body?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.body?.cartValue ?? $node[\"Cart Abandoned Webhook\"].json.properties?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.cartValue ?? 0}}",
+                            "operation": "largerEqual",
+                            "value2": 150000
+                        }
+                    ]
+                }
+            },
+            "id": "9",
+            "name": "Eligible For Freeship?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [2210, 220]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000/api/v1') + '/internal/journeys/abandoned-carts/offers/freeship'}}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'REPLACE_WITH_BITENEX_INTERNAL_TOKEN')}}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"journey\": \"abandoned_cart_recovery\",\n  \"user_id\": {{$node[\"Cart Abandoned Webhook\"].json.body?.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.user_id) : $node[\"Cart Abandoned Webhook\"].json.body?.userId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.userId) : $node[\"Cart Abandoned Webhook\"].json.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.user_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.userId)}},\n  \"cart_id\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.properties.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cartId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cartId) : $node[\"Cart Abandoned Webhook\"].json.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cart_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cartId)}},\n  \"cart_value\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.body?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.body?.cartValue ?? $node[\"Cart Abandoned Webhook\"].json.properties?.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.cart_value ?? $node[\"Cart Abandoned Webhook\"].json.cartValue ?? 0}},\n  \"coupon_type\": \"freeship\",\n  \"max_discount\": 30000,\n  \"min_cart_value\": 150000,\n  \"expires_in_hours\": 24,\n  \"reason\": \"abandoned_cart_recovery\"\n}"
+            },
+            "id": "10",
+            "name": "Create Freeship Offer",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [2450, 140]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000/api/v1') + '/notifications/broadcast'}}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'REPLACE_WITH_BITENEX_INTERNAL_TOKEN')}}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"user_ids\": [{{$node[\"Cart Abandoned Webhook\"].json.body?.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.user_id) : $node[\"Cart Abandoned Webhook\"].json.body?.userId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.userId) : $node[\"Cart Abandoned Webhook\"].json.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.user_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.userId)}}],\n  \"type\": \"PROMOTION\",\n  \"title\": \"Freeship cho đơn hàng của bạn\",\n  \"body\": {{JSON.stringify('Hoàn tất đơn ngay hôm nay để nhận ưu đãi freeship' + ($json.code ? ' (' + $json.code + ')' : $json.coupon_code ? ' (' + $json.coupon_code + ')' : '') + '.')}},\n  \"data\": {\n    \"journey\": \"abandoned_cart_recovery\",\n    \"cart_id\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.properties.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cartId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cartId) : $node[\"Cart Abandoned Webhook\"].json.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cart_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cartId)}},\n    \"coupon_code\": {{$json.code ? JSON.stringify($json.code) : $json.coupon_code ? JSON.stringify($json.coupon_code) : 'null'}},\n    \"deep_link\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.deep_link ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.properties.deep_link) : JSON.stringify('bitenex://cart/' + ($node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id || $node[\"Cart Abandoned Webhook\"].json.body?.cart_id || $node[\"Cart Abandoned Webhook\"].json.body?.cartId || $node[\"Cart Abandoned Webhook\"].json.cart_id || $node[\"Cart Abandoned Webhook\"].json.cartId || 'unknown'))}},\n    \"reminder_stage\": 2,\n    \"offer_type\": \"freeship\"\n  }\n}"
+            },
+            "id": "11",
+            "name": "Send Push Reminder 2 With Offer",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [2700, 140]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000/api/v1') + '/notifications/broadcast'}}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'REPLACE_WITH_BITENEX_INTERNAL_TOKEN')}}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"user_ids\": [{{$node[\"Cart Abandoned Webhook\"].json.body?.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.user_id) : $node[\"Cart Abandoned Webhook\"].json.body?.userId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.userId) : $node[\"Cart Abandoned Webhook\"].json.user_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.user_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.userId)}}],\n  \"type\": \"PROMOTION\",\n  \"title\": \"Giỏ hàng của bạn vẫn đang chờ\",\n  \"body\": \"Quay lại hoàn tất đơn hàng trước khi quán đóng cửa nhé.\",\n  \"data\": {\n    \"journey\": \"abandoned_cart_recovery\",\n    \"cart_id\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.properties.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cart_id) : $node[\"Cart Abandoned Webhook\"].json.body?.cartId ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.cartId) : $node[\"Cart Abandoned Webhook\"].json.cart_id ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cart_id) : JSON.stringify($node[\"Cart Abandoned Webhook\"].json.cartId)}},\n    \"deep_link\": {{$node[\"Cart Abandoned Webhook\"].json.body?.properties?.deep_link ? JSON.stringify($node[\"Cart Abandoned Webhook\"].json.body.properties.deep_link) : JSON.stringify('bitenex://cart/' + ($node[\"Cart Abandoned Webhook\"].json.body?.properties?.cart_id || $node[\"Cart Abandoned Webhook\"].json.body?.cart_id || $node[\"Cart Abandoned Webhook\"].json.body?.cartId || $node[\"Cart Abandoned Webhook\"].json.cart_id || $node[\"Cart Abandoned Webhook\"].json.cartId || 'unknown'))}},\n    \"reminder_stage\": 2\n  }\n}"
+            },
+            "id": "12",
+            "name": "Send Push Reminder 2",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [2450, 320]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\n  \"ok\": true,\n  \"journey\": \"abandoned_cart_recovery\",\n  \"message\": \"Bitenex abandoned cart workflow accepted\"\n}"
+            },
+            "id": "13",
+            "name": "Webhook Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [760, 460]
         }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json[\"value\"]}}",
-              "operation": "isEmpty"
-            }
-          ]
+    ],
+    "connections": {
+        "Cart Abandoned Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Cart Still Actionable?",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Webhook Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Cart Still Actionable?": {
+            "main": [
+                [
+                    {
+                        "node": "Check Cart Recovery Status 1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "Check Cart Recovery Status 1": {
+            "main": [
+                [
+                    {
+                        "node": "Still Abandoned After 30m?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Still Abandoned After 30m?": {
+            "main": [
+                [
+                    {
+                        "node": "Send Push Reminder 1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "Send Push Reminder 1": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 2 Hours",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait 2 Hours": {
+            "main": [
+                [
+                    {
+                        "node": "Check Cart Recovery Status 2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Cart Recovery Status 2": {
+            "main": [
+                [
+                    {
+                        "node": "Still Abandoned After 2h?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Still Abandoned After 2h?": {
+            "main": [
+                [
+                    {
+                        "node": "Eligible For Freeship?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "Eligible For Freeship?": {
+            "main": [
+                [
+                    {
+                        "node": "Create Freeship Offer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Send Push Reminder 2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Create Freeship Offer": {
+            "main": [
+                [
+                    {
+                        "node": "Send Push Reminder 2 With Offer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         }
-      },
-      "id": "4",
-      "name": "Dedupe Exists?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [860, 300]
     },
-    {
-      "parameters": {},
-      "id": "5",
-      "name": "Stop (Already Sent)",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [1080, 200]
+    "pinData": {},
+    "settings": {
+        "executionOrder": "v1"
     },
-    {
-      "parameters": {
-        "operation": "set",
-        "key": "={{$node[\"Normalize Payload\"].json[\"dedupe_key\"]}}",
-        "value": "1",
-        "expire": "={{$node[\"Normalize Payload\"].json[\"dedupe_ttl_seconds\"] || 86400}}"
-      },
-      "id": "6",
-      "name": "Redis Set Dedupe",
-      "type": "n8n-nodes-base.redis",
-      "typeVersion": 1,
-      "position": [1080, 400],
-      "credentials": {
-        "redis": {
-          "id": "1",
-          "name": "Redis"
-        }
-      }
+    "staticData": null,
+    "meta": {
+        "templateCredsSetupCompleted": false
     },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$node[\"Normalize Payload\"].json[\"user_id\"]}}",
-              "operation": "isNotEmpty"
-            }
-          ]
-        }
-      },
-      "id": "7",
-      "name": "Has user_id?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [1290, 400]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT email, phone FROM users WHERE id = '{{$node[\"Normalize Payload\"].json[\"user_id\"]}}';"
-      },
-      "id": "8",
-      "name": "Lookup User",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2,
-      "position": [1500, 300],
-      "credentials": {
-        "postgres": {
-          "id": "1",
-          "name": "Postgres"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json[\"email\"]}}",
-              "operation": "isNotEmpty"
-            }
-          ]
-        }
-      },
-      "id": "9",
-      "name": "Has Email?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [1710, 300]
-    },
-    {
-      "parameters": {
-        "fromEmail": "no-reply@example.com",
-        "toEmail": "={{$json[\"email\"]}}",
-        "subject": "You left items in your cart",
-        "text": "We saved your items. Complete your order here: {{$node[\"Normalize Payload\"].json[\"properties\"] && $node[\"Normalize Payload\"].json[\"properties\"][\"checkout_url\"] ? $node[\"Normalize Payload\"].json[\"properties\"][\"checkout_url\"] : \"https://example.com/cart\"}}"
-      },
-      "id": "10",
-      "name": "Send Email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 1,
-      "position": [1920, 220],
-      "credentials": {
-        "smtp": {
-          "id": "1",
-          "name": "SMTP"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json[\"phone\"]}}",
-              "operation": "isNotEmpty"
-            }
-          ]
-        }
-      },
-      "id": "11",
-      "name": "Has Phone?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [1920, 380]
-    },
-    {
-      "parameters": {
-        "resource": "sms",
-        "operation": "send",
-        "from": "+10000000000",
-        "to": "={{$json[\"phone\"]}}",
-        "message": "You left items in your cart. Complete your order: {{$node[\"Normalize Payload\"].json[\"properties\"] && $node[\"Normalize Payload\"].json[\"properties\"][\"checkout_url\"] ? $node[\"Normalize Payload\"].json[\"properties\"][\"checkout_url\"] : \"https://example.com/cart\"}}"
-      },
-      "id": "12",
-      "name": "Send SMS",
-      "type": "n8n-nodes-base.twilio",
-      "typeVersion": 1,
-      "position": [2130, 380],
-      "credentials": {
-        "twilioApi": {
-          "id": "1",
-          "name": "Twilio"
-        }
-      }
-    },
-    {
-      "parameters": {},
-      "id": "13",
-      "name": "Stop (Anonymous)",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [1500, 500]
-    },
-    {
-      "parameters": {},
-      "id": "14",
-      "name": "Stop (No Contact)",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [2130, 520]
-    }
-  ],
-  "connections": {
-    "Webhook Abandoned Cart": {
-      "main": [
-        [
-          {
-            "node": "Normalize Payload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Normalize Payload": {
-      "main": [
-        [
-          {
-            "node": "Redis Get Dedupe",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Redis Get Dedupe": {
-      "main": [
-        [
-          {
-            "node": "Dedupe Exists?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Dedupe Exists?": {
-      "main": [
-        [
-          {
-            "node": "Redis Set Dedupe",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Stop (Already Sent)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Redis Set Dedupe": {
-      "main": [
-        [
-          {
-            "node": "Has user_id?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has user_id?": {
-      "main": [
-        [
-          {
-            "node": "Lookup User",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Stop (Anonymous)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Lookup User": {
-      "main": [
-        [
-          {
-            "node": "Has Email?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has Email?": {
-      "main": [
-        [
-          {
-            "node": "Send Email",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Has Phone?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has Phone?": {
-      "main": [
-        [
-          {
-            "node": "Send SMS",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Stop (No Contact)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
-  "active": false,
-  "settings": {}
+    "active": false,
+    "versionId": "bitenex-abandoned-cart-recovery-v2",
+    "tags": [
+        "bitenex",
+        "abandoned-cart",
+        "journey",
+        "webhook"
+    ]
 }
