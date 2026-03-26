@@ -1,0 +1,376 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "order-completed",
+                "options": {}
+            },
+            "id": "fdcd1eae-9761-4d6e-81b0-ab1dfbaeb887",
+            "name": "Order Completed Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [-1200, 256],
+            "webhookId": "a9ac054d-6435-4c06-a189-6ddd9d65b927"
+        },
+        {
+            "parameters": {
+                "unit": "hours"
+            },
+            "id": "8c190113-41a3-4924-ad2b-8fb5180cd274",
+            "name": "Wait 3-4 hours",
+            "type": "n8n-nodes-base.wait",
+            "position": [-1008, 256],
+            "typeVersion": 1.1,
+            "webhookId": "02658033-0d86-424a-9908-a967a9e493ec"
+        },
+        {
+            "parameters": {
+                "url": "https://api.yourapp.com/orders/history/{{$json[\"user_id\"]}}",
+                "options": {}
+            },
+            "id": "19e69854-0abd-4b56-bdb6-8500ee7ffc66",
+            "name": "Fetch Order History",
+            "type": "n8n-nodes-base.httpRequest",
+            "position": [-800, 256],
+            "typeVersion": 4.4
+        },
+        {
+            "parameters": {
+                "functionCode": "const orders = items[0].json.orders;\nconst freq = orders.length;\n\nlet topItems = {};\norders.forEach(o => {\n  o.items.forEach(i => {\n    topItems[i.name] = (topItems[i.name] || 0) + 1;\n  });\n});\n\nconst sorted = Object.entries(topItems)\n  .sort((a,b) => b[1] - a[1])\n  .slice(0,3)\n  .map(i => i[0]);\n\nreturn [{ json: { freq, topItems: sorted } }];"
+            },
+            "id": "8381f3ae-0a16-4e11-870f-ca4f64bfca1b",
+            "name": "Analyze Behavior",
+            "type": "n8n-nodes-base.function",
+            "position": [-608, 256],
+            "typeVersion": 1
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "number": [
+                        {
+                            "value1": "={{$json[\"freq\"]}}",
+                            "operation": "largerEqual",
+                            "value2": 2
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "1ce6cc76-7573-45c0-9463-b66f890bc297",
+            "name": "IF Repeat >= 2",
+            "type": "n8n-nodes-base.if",
+            "position": [-400, 256],
+            "typeVersion": 2.3
+        },
+        {
+            "parameters": {
+                "functionCode": "return [{ json: { message: `Đặt lại món bạn thích: ${$json.topItems.join(', ')}` } }];"
+            },
+            "id": "5213c5d5-7807-4363-8874-541307c4f93f",
+            "name": "Build Reorder Suggestion",
+            "type": "n8n-nodes-base.function",
+            "position": [-208, 112],
+            "typeVersion": 1
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://fcm.googleapis.com/send",
+                "options": {}
+            },
+            "id": "3a60bbf3-ca3e-4353-8130-79a6a0c0cc1f",
+            "name": "Send Push (Reorder)",
+            "type": "n8n-nodes-base.httpRequest",
+            "position": [96, -112],
+            "typeVersion": 4.4
+        },
+        {
+            "parameters": {
+                "subject": "Đặt lại món bạn thích",
+                "options": {}
+            },
+            "id": "1f1558b1-346f-45a1-b364-8793f6be6b5c",
+            "name": "Send Email (Reorder)",
+            "type": "n8n-nodes-base.emailSend",
+            "position": [96, 96],
+            "typeVersion": 2.1,
+            "webhookId": "b5cea629-1437-4b33-af57-a2e3f22b5547"
+        },
+        {
+            "parameters": {
+                "message": "={{$json[\"message\"]}}",
+                "options": {}
+            },
+            "id": "561eb9f1-76ff-40f9-804c-0435dcb272ea",
+            "name": "Send SMS (Reorder)",
+            "type": "n8n-nodes-base.twilio",
+            "position": [96, 256],
+            "typeVersion": 1
+        },
+        {
+            "parameters": {
+                "url": "https://api.yourapp.com/catalog/recommend",
+                "options": {}
+            },
+            "id": "c37326d6-d543-487a-988d-f30a4ad1d90a",
+            "name": "Fetch Upsell Items",
+            "type": "n8n-nodes-base.httpRequest",
+            "position": [-352, 544],
+            "typeVersion": 4.4
+        },
+        {
+            "parameters": {
+                "functionCode": "const items = items[0].json.items.slice(0,2);\nreturn [{ json: { message: `Thử món mới: ${items.join(', ')} - giảm 10% cho lần đầu!` } }];"
+            },
+            "id": "8d9b8da7-af9e-4d6f-b7e6-a0ec1a1cb93d",
+            "name": "Build Upsell Message",
+            "type": "n8n-nodes-base.function",
+            "position": [-96, 544],
+            "typeVersion": 1
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://fcm.googleapis.com/send",
+                "options": {}
+            },
+            "id": "f1e510d6-ec04-4e77-99c3-a9bdadfb72e6",
+            "name": "Send Push (Upsell)",
+            "type": "n8n-nodes-base.httpRequest",
+            "position": [176, 464],
+            "typeVersion": 4.4
+        },
+        {
+            "parameters": {
+                "subject": "Ưu đãi món mới",
+                "options": {}
+            },
+            "id": "b6ae1425-8b60-4cf1-940e-da131793048a",
+            "name": "Send Email (Upsell)",
+            "type": "n8n-nodes-base.emailSend",
+            "position": [176, 640],
+            "typeVersion": 2.1,
+            "webhookId": "51563aba-84cb-419a-8bdc-086ae1e3691f"
+        },
+        {
+            "parameters": {
+                "message": "={{$json[\"message\"]}}",
+                "options": {}
+            },
+            "id": "f96cb7b9-8abf-4e99-b0e0-b096d79b6e51",
+            "name": "Send SMS (Upsell)",
+            "type": "n8n-nodes-base.twilio",
+            "position": [176, 816],
+            "typeVersion": 1
+        },
+        {
+            "parameters": {
+                "schema": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "public"
+                },
+                "table": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": ""
+                }
+            },
+            "id": "12cbcc7d-ed5e-4b6c-8fc2-2aed8964b0d0",
+            "name": "Log Notification",
+            "type": "n8n-nodes-base.postgres",
+            "position": [656, 224],
+            "typeVersion": 2.6
+        }
+    ],
+    "connections": {
+        "Order Completed Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 3-4 hours",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait 3-4 hours": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Order History",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Order History": {
+            "main": [
+                [
+                    {
+                        "node": "Analyze Behavior",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Analyze Behavior": {
+            "main": [
+                [
+                    {
+                        "node": "IF Repeat >= 2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF Repeat >= 2": {
+            "main": [
+                [
+                    {
+                        "node": "Build Reorder Suggestion",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Fetch Upsell Items",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Build Reorder Suggestion": {
+            "main": [
+                [
+                    {
+                        "node": "Send Push (Reorder)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Send Email (Reorder)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Send SMS (Reorder)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Push (Reorder)": {
+            "main": [
+                [
+                    {
+                        "node": "Log Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Email (Reorder)": {
+            "main": [
+                [
+                    {
+                        "node": "Log Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send SMS (Reorder)": {
+            "main": [
+                [
+                    {
+                        "node": "Log Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Upsell Items": {
+            "main": [
+                [
+                    {
+                        "node": "Build Upsell Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Build Upsell Message": {
+            "main": [
+                [
+                    {
+                        "node": "Send Push (Upsell)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Send Email (Upsell)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Send SMS (Upsell)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Push (Upsell)": {
+            "main": [
+                [
+                    {
+                        "node": "Log Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Email (Upsell)": {
+            "main": [
+                [
+                    {
+                        "node": "Log Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send SMS (Upsell)": {
+            "main": [
+                [
+                    {
+                        "node": "Log Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "8e5b81ac53a0f712b6daec9592026d0bf01bec030f67ba217e6501fafcf706c3"
+    }
+}
