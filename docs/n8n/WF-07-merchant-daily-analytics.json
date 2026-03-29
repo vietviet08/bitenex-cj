@@ -1,0 +1,145 @@
+{
+  "name": "WF-07: Merchant Daily Analytics Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 8 * * *" }] }
+      },
+      "id": "cron-daily",
+      "name": "Cron: 08:00 Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/merchants/active-list",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
+        "options": {}
+      },
+      "id": "get-merchants",
+      "name": "GET: Active Merchants",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": { "batchSize": 10, "options": {} },
+      "id": "batch-merchants",
+      "name": "Split In Batches (10)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/merchants/{{ $json.merchantId }}/daily-stats",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [{ "name": "date", "value": "={{ $now.minus({ days: 1 }).toFormat('yyyy-MM-dd') }}" }]
+        },
+        "options": {}
+      },
+      "id": "get-merchant-stats",
+      "name": "GET: Merchant Daily Stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const stats = $input.item.json;\nconst revenueChangePercent = stats.lastWeekRevenue > 0 ? ((stats.revenue - stats.lastWeekRevenue) / stats.lastWeekRevenue * 100) : 0;\n\nlet badge = '';\nlet badgeColor = '#666';\nif (revenueChangePercent >= 10) { badge = '🔥 Ngày bùng nổ!'; badgeColor = '#e74c3c'; }\nelse if (revenueChangePercent <= -20) { badge = '⚠️ Doanh thu sụt giảm'; badgeColor = '#f39c12'; }\nelse { badge = '📊 Ổn định'; badgeColor = '#27ae60'; }\n\nconst topItemsHtml = (stats.topItems || []).slice(0, 3).map((item, i) => `<tr><td style='padding: 8px;'>${i+1}. ${item.name}</td><td style='padding: 8px; text-align: right;'>${item.quantity} đơn</td><td style='padding: 8px; text-align: right;'>${(item.revenue || 0).toLocaleString()}đ</td></tr>`).join('');\n\nreturn [{ json: { ...stats, revenueChangePercent: revenueChangePercent.toFixed(1), badge, badgeColor, topItemsHtml } }];"
+      },
+      "id": "code-format-report",
+      "name": "Code: Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "analytics@bitenex.vn",
+        "toEmail": "={{ $json.ownerEmail }}",
+        "subject": "📊 Báo cáo ngày {{ $now.minus({ days: 1 }).toFormat('dd/MM/yyyy') }} - {{ $json.merchantName }}",
+        "emailType": "html",
+        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa;'><div style='background: linear-gradient(135deg, #FF6B35, #FF4500); padding: 28px; text-align: center; border-radius: 12px 12px 0 0;'><h1 style='color: white; margin: 0; font-size: 22px;'>📊 Báo cáo hàng ngày</h1><p style='color: rgba(255,255,255,0.9); margin: 8px 0 0;'>{{ $json.merchantName }}</p></div><div style='background: white; padding: 24px; border-radius: 0 0 12px 12px;'><div style='background: {{ $json.badgeColor }}20; border-left: 4px solid {{ $json.badgeColor }}; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'><strong style='color: {{ $json.badgeColor }};'>{{ $json.badge }}</strong><span style='color: #666; margin-left: 8px;'>{{ $json.revenueChangePercent > 0 ? '+' : '' }}{{ $json.revenueChangePercent }}% so với tuần trước</span></div><table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'><tr style='background: #f8f9fa;'><td style='padding: 12px; font-weight: bold; border-radius: 8px 0 0 0;'>Tổng doanh thu</td><td style='padding: 12px; text-align: right; font-size: 20px; color: #FF6B35; font-weight: bold;'>{{ $json.revenue.toLocaleString() }}đ</td></tr><tr><td style='padding: 12px;'>Số đơn hàng</td><td style='padding: 12px; text-align: right;'>{{ $json.totalOrders }} đơn</td></tr><tr style='background: #f8f9fa;'><td style='padding: 12px;'>Đánh giá trung bình</td><td style='padding: 12px; text-align: right;'>{{ $json.averageRating }} ⭐</td></tr><tr><td style='padding: 12px;'>Tỷ lệ hủy đơn</td><td style='padding: 12px; text-align: right; color: {{ $json.cancelRate > 10 ? '#e74c3c' : '#27ae60' }};'>{{ $json.cancelRate }}%</td></tr></table><h3 style='color: #333; border-bottom: 2px solid #FF6B35; padding-bottom: 8px;'>🏆 Top 3 món bán chạy</h3><table style='width: 100%; border-collapse: collapse;'>{{ $json.topItemsHtml }}</table><div style='margin-top: 20px; padding: 16px; background: #f0f7ff; border-radius: 8px; text-align: center;'><a href='https://merchant.bitenex.vn/dashboard' style='color: #3498db; font-weight: bold; text-decoration: none;'>Xem báo cáo chi tiết →</a></div></div></body></html>"
+      },
+      "id": "send-report-email",
+      "name": "Send: Analytics Report Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1340, 340]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "leftValue": "={{ $json.averageRating }}", "rightValue": 3.5, "operator": { "type": "number", "operation": "lt" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "if-low-rating",
+      "name": "IF: Low Rating < 3.5?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 480]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '⚠️ Merchant Low Rating Alert', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: `*Merchant:* ${$json.merchantName}\\n*Rating Today:* ${$json.averageRating} ⭐\\n*Total Orders:* ${$json.totalOrders}\\n*Action:* Review merchant quality` } }] }) }}",
+        "options": {}
+      },
+      "id": "slack-low-rating",
+      "name": "Slack: Low Rating Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 480]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event", "value": "daily_digest_sent" },
+            { "name": "properties", "value": "={{ JSON.stringify({ merchantId: $json.merchantId, date: $now.minus({ days: 1 }).toFormat('yyyy-MM-dd'), revenue: $json.revenue, totalOrders: $json.totalOrders }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "track-digest-sent",
+      "name": "Track: daily_digest_sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 400]
+    }
+  ],
+  "connections": {
+    "Cron: 08:00 Daily": { "main": [[{ "node": "GET: Active Merchants", "type": "main", "index": 0 }]] },
+    "GET: Active Merchants": { "main": [[{ "node": "Split In Batches (10)", "type": "main", "index": 0 }]] },
+    "Split In Batches (10)": { "main": [[{ "node": "GET: Merchant Daily Stats", "type": "main", "index": 0 }]] },
+    "GET: Merchant Daily Stats": { "main": [[{ "node": "Code: Format Report", "type": "main", "index": 0 }]] },
+    "Code: Format Report": { "main": [[{ "node": "Send: Analytics Report Email", "type": "main", "index": 0 }, { "node": "IF: Low Rating < 3.5?", "type": "main", "index": 0 }]] },
+    "Send: Analytics Report Email": { "main": [[{ "node": "Track: daily_digest_sent", "type": "main", "index": 0 }]] },
+    "IF: Low Rating < 3.5?": {
+      "main": [
+        [{ "node": "Slack: Low Rating Alert", "type": "main", "index": 0 }],
+        [{ "node": "Track: daily_digest_sent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Slack: Low Rating Alert": { "main": [[{ "node": "Track: daily_digest_sent", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
+  "tags": [{ "id": "tag-bitenex", "name": "bitenex" }, { "id": "tag-analytics", "name": "merchant-analytics" }],
+  "versionId": "wf07-v1"
+}

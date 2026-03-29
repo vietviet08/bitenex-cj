@@ -1,0 +1,183 @@
+{
+  "name": "WF-05: Driver Dispatch SLA Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "*/5 * * * *" }] }
+      },
+      "id": "cron-sla",
+      "name": "Cron: Every 5 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/orders/active-deliveries",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "get-active-deliveries",
+      "name": "GET: Active Deliveries",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "split-deliveries",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const order = $input.item.json;\nconst now = new Date();\nconst assignedAt = new Date(order.assignedAt);\nconst estimatedMinutes = order.estimatedDeliveryMinutes || 30;\nconst elapsedMinutes = (now - assignedAt) / (1000 * 60);\nconst overdueMinutes = elapsedMinutes - estimatedMinutes;\n\nlet slaStatus = 'on_time';\nif (overdueMinutes >= 30) slaStatus = 'critical';\nelse if (overdueMinutes >= 20) slaStatus = 'escalate';\nelse if (overdueMinutes >= 10) slaStatus = 'warning';\n\nreturn [{ json: { ...order, elapsedMinutes: Math.round(elapsedMinutes), overdueMinutes: Math.round(overdueMinutes), slaStatus } }];"
+      },
+      "id": "code-calc-sla",
+      "name": "Code: Calculate SLA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.slaStatus }}", "rightValue": "warning", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 0 },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.slaStatus }}", "rightValue": "escalate", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 1 },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.slaStatus }}", "rightValue": "critical", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 2 }
+          ]
+        },
+        "fallbackOutput": "none"
+      },
+      "id": "switch-sla",
+      "name": "Switch: SLA Status",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.driverId }}" },
+            { "name": "title", "value": "⚡ Hãy đẩy nhanh giao hàng!" },
+            { "name": "body", "value": "Đơn {{ $json.orderNumber }} đã trễ {{ $json.overdueMinutes }} phút. Giao ngay nhé!" },
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'sla_warning', orderId: $json.orderId }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "push-driver-warning",
+      "name": "Push: Warn Driver",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "title", "value": "⏳ Đơn hàng bị trễ một chút" },
+            { "name": "body", "value": "Xin lỗi vì sự chậm trễ! Chúng tôi đang theo dõi và đền bù cho bạn 🙏" },
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'sla_delay_customer', orderId: $json.orderId }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "push-customer-delay",
+      "name": "Push: Customer Delay Notice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 380]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/marketing/issue-voucher",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "voucherCode", "value": "DELAYVOUCHER20K" },
+            { "name": "discountAmount", "value": "20000" },
+            { "name": "expiresInDays", "value": "7" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "issue-delay-voucher",
+      "name": "Issue: Delay Voucher 20K",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 380]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '🔴 CRITICAL SLA BREACH!', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: `*Order:* ${$json.orderNumber}\\n*Driver:* ${$json.driverId}\\n*Overdue:* ${$json.overdueMinutes} minutes\\n*User:* ${$json.userId}\\n*Action Required: Ops Team Escalation*` } }] }) }}",
+        "options": {}
+      },
+      "id": "slack-critical",
+      "name": "Slack: Critical SLA Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 540]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event", "value": "sla_breach" },
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "properties", "value": "={{ JSON.stringify({ orderId: $json.orderId, slaStatus: $json.slaStatus, overdueMinutes: $json.overdueMinutes }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "track-sla-breach",
+      "name": "Track: SLA Breach",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 540]
+    }
+  ],
+  "connections": {
+    "Cron: Every 5 minutes": { "main": [[{ "node": "GET: Active Deliveries", "type": "main", "index": 0 }]] },
+    "GET: Active Deliveries": { "main": [[{ "node": "Split In Batches", "type": "main", "index": 0 }]] },
+    "Split In Batches": { "main": [[{ "node": "Code: Calculate SLA", "type": "main", "index": 0 }]] },
+    "Code: Calculate SLA": { "main": [[{ "node": "Switch: SLA Status", "type": "main", "index": 0 }]] },
+    "Switch: SLA Status": {
+      "main": [
+        [{ "node": "Push: Warn Driver", "type": "main", "index": 0 }],
+        [{ "node": "Push: Customer Delay Notice", "type": "main", "index": 0 }],
+        [{ "node": "Slack: Critical SLA Alert", "type": "main", "index": 0 }]
+      ]
+    },
+    "Push: Customer Delay Notice": { "main": [[{ "node": "Issue: Delay Voucher 20K", "type": "main", "index": 0 }]] },
+    "Slack: Critical SLA Alert": { "main": [[{ "node": "Track: SLA Breach", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
+  "tags": [{ "id": "tag-bitenex", "name": "bitenex" }, { "id": "tag-sla", "name": "sla-monitor" }],
+  "versionId": "wf05-v1"
+}
