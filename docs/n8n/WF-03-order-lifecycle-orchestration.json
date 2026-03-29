@@ -1,0 +1,243 @@
+{
+  "name": "WF-03: Order Lifecycle Orchestration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bitenex/order-status-changed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-order-status",
+      "name": "Webhook: order.status_changed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify({ received: true, workflowId: 'WF-03' }) }}" },
+      "id": "resp-03",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 240]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "orderId", "value": "={{ $json.body.orderId }}", "type": "string" },
+            { "id": "2", "name": "orderNumber", "value": "={{ $json.body.orderNumber }}", "type": "string" },
+            { "id": "3", "name": "userId", "value": "={{ $json.body.userId }}", "type": "string" },
+            { "id": "4", "name": "merchantId", "value": "={{ $json.body.merchantId }}", "type": "string" },
+            { "id": "5", "name": "driverId", "value": "={{ $json.body.driverId }}", "type": "string" },
+            { "id": "6", "name": "fromStatus", "value": "={{ $json.body.fromStatus }}", "type": "string" },
+            { "id": "7", "name": "toStatus", "value": "={{ $json.body.toStatus }}", "type": "string" },
+            { "id": "8", "name": "total", "value": "={{ $json.body.total }}", "type": "number" },
+            { "id": "9", "name": "merchantName", "value": "={{ $json.body.merchantName }}", "type": "string" },
+            { "id": "10", "name": "currency", "value": "={{ $json.body.currency || 'VND' }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-vars-03",
+      "name": "Set Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "CONFIRMED", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 0 },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "PREPARING", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 1 },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "READY", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 2 },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "PICKING_UP", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 3 },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "DELIVERING", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 4 },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "DELIVERED", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 5 },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "CANCELLED", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 6 },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "REFUNDED", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 7 }
+          ]
+        },
+        "fallbackOutput": "none"
+      },
+      "id": "switch-status",
+      "name": "Switch: Order Status",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const vars = $('Set Variables').item.json;\nconst messages = {\n  CONFIRMED: { title: '✅ Đơn hàng đã xác nhận!', body: `Đơn ${vars.orderNumber} từ ${vars.merchantName} đang được xác nhận. Nhà hàng sẽ bắt đầu chuẩn bị ngay!`, type: 'order_confirmed' },\n  PREPARING: { title: '🍳 Đang chuẩn bị món!', body: `${vars.merchantName} đang nấu đơn ${vars.orderNumber} cho bạn. Khoảng 15-20 phút nữa!`, type: 'order_preparing' },\n  READY: { title: '🎉 Món đã sẵn sàng!', body: `Đơn hàng tại ${vars.merchantName} đã xong. Tài xế đang trên đường đến lấy!`, type: 'order_ready' },\n  PICKING_UP: { title: '🛵 Tài xế đang lấy hàng!', body: `Tài xế đã đến ${vars.merchantName} và đang lấy đơn ${vars.orderNumber} của bạn.`, type: 'order_picking_up' },\n  DELIVERING: { title: '🚀 Đang giao đến bạn!', body: `Đơn hàng đang trên đường. Theo dõi realtime trong app!`, type: 'order_delivering' },\n  DELIVERED: { title: '🥳 Đã giao thành công!', body: `Đơn ${vars.orderNumber} đã được giao. Chúc bạn ngon miệng! Để lại đánh giá nhé ⭐`, type: 'order_delivered' },\n  CANCELLED: { title: '❌ Đơn hàng đã hủy', body: `Đơn ${vars.orderNumber} đã bị hủy. Hoàn tiền sẽ được xử lý trong 3-5 ngày làm việc.`, type: 'order_cancelled' },\n  REFUNDED: { title: '💸 Hoàn tiền thành công!', body: `Tiền hoàn cho đơn ${vars.orderNumber} đã được gửi về tài khoản của bạn.`, type: 'order_refunded' }\n};\nconst msg = messages[vars.toStatus] || { title: 'Cập nhật đơn hàng', body: `Đơn ${vars.orderNumber} đã cập nhật trạng thái.`, type: 'order_update' };\nreturn [{ json: { ...vars, notification: msg } }];"
+      },
+      "id": "code-format-notification",
+      "name": "Code: Format Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "title", "value": "={{ $json.notification.title }}" },
+            { "name": "body", "value": "={{ $json.notification.body }}" },
+            { "name": "data", "value": "={{ JSON.stringify({ type: $json.notification.type, orderId: $json.orderId, deepLink: 'bitenex://order/' + $json.orderId }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-push-notification",
+      "name": "Send: Push Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/in-app",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "type", "value": "ORDER_UPDATE" },
+            { "name": "channel", "value": "IN_APP" },
+            { "name": "title", "value": "={{ $json.notification.title }}" },
+            { "name": "body", "value": "={{ $json.notification.body }}" },
+            { "name": "data", "value": "={{ JSON.stringify({ orderId: $json.orderId, status: $json.toStatus }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-inapp-notification",
+      "name": "Save: In-App Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 460]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "DELIVERED", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "if-delivered",
+      "name": "IF: Status = DELIVERED?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event", "value": "order_delivered" },
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "properties", "value": "={{ JSON.stringify({ orderId: $json.orderId, orderNumber: $json.orderNumber, total: $json.total, merchantId: $json.merchantId }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "track-delivered",
+      "name": "Track: order_delivered",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/webhook/bitenex/order-delivered",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "orderId", "value": "={{ $json.orderId }}" },
+            { "name": "merchantId", "value": "={{ $json.merchantId }}" },
+            { "name": "merchantName", "value": "={{ $json.merchantName }}" },
+            { "name": "driverId", "value": "={{ $json.driverId }}" },
+            { "name": "total", "value": "={{ $json.total }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-wf04",
+      "name": "Trigger: WF-04 (Delivered Flow)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event", "value": "order_status_updated" },
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "properties", "value": "={{ JSON.stringify({ orderId: $json.orderId, fromStatus: $json.fromStatus, toStatus: $json.toStatus }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "track-status-change",
+      "name": "Track: order_status_updated",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 500]
+    }
+  ],
+  "connections": {
+    "Webhook: order.status_changed": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }, { "node": "Set Variables", "type": "main", "index": 0 }]]
+    },
+    "Set Variables": { "main": [[{ "node": "Switch: Order Status", "type": "main", "index": 0 }]] },
+    "Switch: Order Status": {
+      "main": [
+        [{ "node": "Code: Format Notification", "type": "main", "index": 0 }],
+        [{ "node": "Code: Format Notification", "type": "main", "index": 0 }],
+        [{ "node": "Code: Format Notification", "type": "main", "index": 0 }],
+        [{ "node": "Code: Format Notification", "type": "main", "index": 0 }],
+        [{ "node": "Code: Format Notification", "type": "main", "index": 0 }],
+        [{ "node": "Code: Format Notification", "type": "main", "index": 0 }],
+        [{ "node": "Code: Format Notification", "type": "main", "index": 0 }],
+        [{ "node": "Code: Format Notification", "type": "main", "index": 0 }]
+      ]
+    },
+    "Code: Format Notification": {
+      "main": [[{ "node": "Send: Push Notification", "type": "main", "index": 0 }, { "node": "Save: In-App Notification", "type": "main", "index": 0 }]]
+    },
+    "Send: Push Notification": { "main": [[{ "node": "IF: Status = DELIVERED?", "type": "main", "index": 0 }]] },
+    "Save: In-App Notification": { "main": [[{ "node": "IF: Status = DELIVERED?", "type": "main", "index": 0 }]] },
+    "IF: Status = DELIVERED?": {
+      "main": [
+        [{ "node": "Track: order_delivered", "type": "main", "index": 0 }, { "node": "Trigger: WF-04 (Delivered Flow)", "type": "main", "index": 0 }],
+        [{ "node": "Track: order_status_updated", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
+  "tags": [{ "id": "tag-bitenex", "name": "bitenex" }, { "id": "tag-order", "name": "order-lifecycle" }],
+  "versionId": "wf03-v1"
+}

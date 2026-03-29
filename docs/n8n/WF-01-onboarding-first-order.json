@@ -1,0 +1,355 @@
+{
+  "name": "WF-01: Onboarding → First Order Journey",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bitenex/user-registered",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b1a2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Webhook: user.registered",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "user-registered-bitenex"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true, workflowId: 'WF-01' }) }}"
+      },
+      "id": "resp-01",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "userId", "value": "={{ $json.body.userId }}", "type": "string" },
+            { "id": "2", "name": "firstName", "value": "={{ $json.body.firstName }}", "type": "string" },
+            { "id": "3", "name": "email", "value": "={{ $json.body.email }}", "type": "string" },
+            { "id": "4", "name": "phone", "value": "={{ $json.body.phone }}", "type": "string" },
+            { "id": "5", "name": "city", "value": "={{ $json.body.city }}", "type": "string" },
+            { "id": "6", "name": "platform", "value": "={{ $json.body.platform }}", "type": "string" },
+            { "id": "7", "name": "registeredAt", "value": "={{ $json.body.registeredAt }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-vars-01",
+      "name": "Set Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event", "value": "user_registered" },
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "properties", "value": "={{ JSON.stringify({ city: $json.city, platform: $json.platform }) }}" }
+          ]
+        },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "track-registered",
+      "name": "Track: user_registered",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@bitenex.vn",
+        "toEmail": "={{ $json.email }}",
+        "subject": "🎉 Chào mừng {{ $json.firstName }} đến với Bitenex!",
+        "emailType": "html",
+        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><h1 style='color: #FF6B35;'>Chào {{ $json.firstName }}! 👋</h1><p>Bạn đã gia nhập Bitenex — ứng dụng giao đồ ăn nhanh nhất tại {{ $json.city }}!</p><p>🍜 Khám phá hàng trăm nhà hàng xung quanh bạn</p><p>🛵 Giao hàng trong 30 phút</p><p>💳 Thanh toán linh hoạt (VNPAY, COD, Ví điện tử)</p><a href='bitenex://home' style='display: inline-block; background: #FF6B35; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 20px;'>Đặt món ngay</a></body></html>"
+      },
+      "id": "send-welcome-email",
+      "name": "Send Welcome Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [900, 260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "title", "value": "Chào mừng đến Bitenex! 🎉" },
+            { "name": "body", "value": "Khám phá hàng trăm món ăn ngon xung quanh bạn. Đặt ngay!" },
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'welcome', deepLink: 'bitenex://home' }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-welcome-push",
+      "name": "Send Welcome Push",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 340]
+    },
+    {
+      "parameters": { "amount": 10, "unit": "minutes" },
+      "id": "wait-10min",
+      "name": "Wait 10 minutes",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/journeys/users/{{ $('Set Variables').item.json.userId }}/first-order-status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }]
+        },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "check-first-order-1",
+      "name": "Check: Has First Order? (1)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "cond1", "leftValue": "={{ $json.hasFirstOrder }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "if-has-first-order-1",
+      "name": "IF: Has First Order? (1)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event", "value": "first_order_converted" },
+            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
+            { "name": "properties", "value": "={{ JSON.stringify({ tag: 'new_converted', stage: 'early_10min' }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "track-converted-1",
+      "name": "Track: first_order_converted (1)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
+            { "name": "title", "value": "🍽️ Đặt đơn đầu tiên nào!" },
+            { "name": "body", "value": "Miễn phí ship đơn đầu tiên! Hàng trăm nhà hàng đang chờ bạn 🛵" },
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'first_order_nudge', deepLink: 'bitenex://home' }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-nudge-push",
+      "name": "Send: Welcome Nudge Push",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 380]
+    },
+    {
+      "parameters": { "amount": 6, "unit": "hours" },
+      "id": "wait-6h",
+      "name": "Wait 6 hours",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2000, 380]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/journeys/users/{{ $('Set Variables').item.json.userId }}/first-order-status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }]
+        },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "check-first-order-2",
+      "name": "Check: Has First Order? (2)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 380]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "id": "cond2", "leftValue": "={{ $json.hasFirstOrder }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "if-has-first-order-2",
+      "name": "IF: Has First Order? (2)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2440, 380]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/marketing/issue-voucher",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
+            { "name": "voucherCode", "value": "WELCOME50K" },
+            { "name": "discountAmount", "value": "50000" },
+            { "name": "expiresInHours", "value": "24" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "issue-voucher",
+      "name": "Issue Voucher: WELCOME50K",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2660, 460]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
+            { "name": "title", "value": "🎁 Quà tặng cho bạn!" },
+            { "name": "body", "value": "Tặng voucher 50.000đ cho đơn đầu tiên! Chỉ còn 24 giờ ⏰" },
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'voucher_issued', voucherCode: 'WELCOME50K', deepLink: 'bitenex://home' }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-voucher-push",
+      "name": "Send: Voucher Push + Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2880, 460]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event", "value": "user_unactivated_24h" },
+            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
+            { "name": "properties", "value": "={{ JSON.stringify({ segment: 're-engage', tag: 'unactivated_24h' }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "tag-unactivated",
+      "name": "Tag: unactivated_24h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3100, 460]
+    }
+  ],
+  "connections": {
+    "Webhook: user.registered": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }, { "node": "Set Variables", "type": "main", "index": 0 }]]
+    },
+    "Set Variables": {
+      "main": [[{ "node": "Track: user_registered", "type": "main", "index": 0 }]]
+    },
+    "Track: user_registered": {
+      "main": [[{ "node": "Send Welcome Email", "type": "main", "index": 0 }, { "node": "Send Welcome Push", "type": "main", "index": 0 }]]
+    },
+    "Send Welcome Email": {
+      "main": [[{ "node": "Wait 10 minutes", "type": "main", "index": 0 }]]
+    },
+    "Send Welcome Push": {
+      "main": [[{ "node": "Wait 10 minutes", "type": "main", "index": 0 }]]
+    },
+    "Wait 10 minutes": {
+      "main": [[{ "node": "Check: Has First Order? (1)", "type": "main", "index": 0 }]]
+    },
+    "Check: Has First Order? (1)": {
+      "main": [[{ "node": "IF: Has First Order? (1)", "type": "main", "index": 0 }]]
+    },
+    "IF: Has First Order? (1)": {
+      "main": [
+        [{ "node": "Track: first_order_converted (1)", "type": "main", "index": 0 }],
+        [{ "node": "Send: Welcome Nudge Push", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send: Welcome Nudge Push": {
+      "main": [[{ "node": "Wait 6 hours", "type": "main", "index": 0 }]]
+    },
+    "Wait 6 hours": {
+      "main": [[{ "node": "Check: Has First Order? (2)", "type": "main", "index": 0 }]]
+    },
+    "Check: Has First Order? (2)": {
+      "main": [[{ "node": "IF: Has First Order? (2)", "type": "main", "index": 0 }]]
+    },
+    "IF: Has First Order? (2)": {
+      "main": [
+        [{ "node": "Track: first_order_converted (1)", "type": "main", "index": 0 }],
+        [{ "node": "Issue Voucher: WELCOME50K", "type": "main", "index": 0 }]
+      ]
+    },
+    "Issue Voucher: WELCOME50K": {
+      "main": [[{ "node": "Send: Voucher Push + Email", "type": "main", "index": 0 }]]
+    },
+    "Send: Voucher Push + Email": {
+      "main": [[{ "node": "Tag: unactivated_24h", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromAList",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    { "createdAt": "2026-03-29T05:00:00.000Z", "updatedAt": "2026-03-29T05:00:00.000Z", "id": "tag-bitenex", "name": "bitenex" },
+    { "createdAt": "2026-03-29T05:00:00.000Z", "updatedAt": "2026-03-29T05:00:00.000Z", "id": "tag-onboarding", "name": "onboarding" }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2026-03-29T05:00:00.000Z",
+  "versionId": "wf01-v1"
+}

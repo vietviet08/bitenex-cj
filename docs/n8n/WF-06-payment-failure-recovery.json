@@ -1,0 +1,253 @@
+{
+  "name": "WF-06: Payment Failure Recovery",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bitenex/payment-failed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-payment-failed",
+      "name": "Webhook: payment.failed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify({ received: true, workflowId: 'WF-06' }) }}" },
+      "id": "resp-06",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 240]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "paymentId", "value": "={{ $json.body.paymentId }}", "type": "string" },
+            { "id": "2", "name": "orderId", "value": "={{ $json.body.orderId }}", "type": "string" },
+            { "id": "3", "name": "userId", "value": "={{ $json.body.userId }}", "type": "string" },
+            { "id": "4", "name": "amount", "value": "={{ $json.body.amount }}", "type": "number" },
+            { "id": "5", "name": "method", "value": "={{ $json.body.method }}", "type": "string" },
+            { "id": "6", "name": "errorCode", "value": "={{ $json.body.errorCode || 'OTHER' }}", "type": "string" },
+            { "id": "7", "name": "gateway", "value": "={{ $json.body.gateway }}", "type": "string" },
+            { "id": "8", "name": "email", "value": "={{ $json.body.email }}", "type": "string" },
+            { "id": "9", "name": "phone", "value": "={{ $json.body.phone }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-vars-06",
+      "name": "Set Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event", "value": "payment_failed" },
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "properties", "value": "={{ JSON.stringify({ paymentId: $json.paymentId, orderId: $json.orderId, errorCode: $json.errorCode, method: $json.method, gateway: $json.gateway }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "track-payment-failed",
+      "name": "Track: payment_failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const vars = $input.item.json;\nconst errorMessages = {\n  INSUFFICIENT_FUNDS: { title: '💳 Số dư không đủ', body: 'Tài khoản không đủ tiền. Hãy nạp thêm hoặc thử phương thức thanh toán khác nhé!' },\n  EXPIRED_CARD: { title: '⚠️ Thẻ đã hết hạn', body: 'Thẻ của bạn đã hết hạn sử dụng. Vui lòng cập nhật thẻ mới trong ứng dụng.' },\n  NETWORK_ERROR: { title: '🌐 Lỗi kết nối', body: 'Có sự cố kết nối trong quá trình thanh toán. Vui lòng thử lại!' },\n  INVALID_CARD: { title: '❌ Thông tin thẻ không hợp lệ', body: 'Thông tin thẻ không chính xác. Kiểm tra lại số thẻ và CVV nhé.' },\n  OTHER: { title: '❌ Thanh toán thất bại', body: 'Thanh toán không thành công. Vui lòng thử lại hoặc chọn phương thức khác.' }\n};\nconst msg = errorMessages[vars.errorCode] || errorMessages.OTHER;\nreturn [{ json: { ...vars, notification: msg } }];"
+      },
+      "id": "code-error-msg",
+      "name": "Code: Error Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "title", "value": "={{ $json.notification.title }}" },
+            { "name": "body", "value": "={{ $json.notification.body }}" },
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'payment_failed', orderId: $json.orderId, deepLink: 'bitenex://payment/' + $json.orderId }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-failure-push",
+      "name": "Send: Payment Failure Push",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 320]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@bitenex.vn",
+        "toEmail": "={{ $json.email }}",
+        "subject": "❌ Thanh toán thất bại - Đơn hàng của bạn",
+        "emailType": "html",
+        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><h2 style='color: #e74c3c;'>Thanh toán không thành công</h2><p>{{ $json.notification.body }}</p><p>Đơn hàng của bạn đang chờ thanh toán. Hãy thử lại để không bỏ lỡ bữa ăn!</p><a href='bitenex://payment/{{ $json.orderId }}' style='display: inline-block; background: #FF6B35; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;'>Thử lại thanh toán →</a><p style='margin-top: 24px; color: #666; font-size: 14px;'>Cần hỗ trợ? Liên hệ: support@bitenex.vn hoặc 1800-BITENEX</p></body></html>"
+      },
+      "id": "send-failure-email",
+      "name": "Send: Payment Failure Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1120, 480]
+    },
+    { "parameters": { "amount": 1, "unit": "hours" }, "id": "wait-1h", "name": "Wait 1 hour", "type": "n8n-nodes-base.wait", "typeVersion": 1.1, "position": [1340, 400] },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/payments/{{ $('Set Variables').item.json.paymentId }}/status",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "check-payment-status",
+      "name": "Check: Payment Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "leftValue": "={{ $json.status }}", "rightValue": "COMPLETED", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "if-paid",
+      "name": "IF: Payment Recovered?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1780, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event", "value": "payment_recovered" },
+            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "track-recovered",
+      "name": "Track: payment_recovered",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "leftValue": "={{ $('Set Variables').item.json.method }}", "rightValue": "CASH_ON_DELIVERY", "operator": { "type": "string", "operation": "notEquals" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "if-can-cod",
+      "name": "IF: COD Available?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2000, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
+            { "name": "title", "value": "💵 Thanh toán tiền mặt?" },
+            { "name": "body", "value": "Bạn có thể đổi sang thanh toán tiền mặt khi nhận hàng (COD). Đặt ngay!" },
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'cod_offer', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenex://payment/' + $('Set Variables').item.json.orderId }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "offer-cod",
+      "name": "Offer: COD Alternative Push",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 420]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@bitenex.vn",
+        "toEmail": "={{ $('Set Variables').item.json.phone }}",
+        "subject": "Bitenex Support - Thanh toán thất bại",
+        "message": "=Chào bạn, thanh toán đơn hàng của bạn bị lỗi. Gọi ngay hotline 1800-BITENEX để được hỗ trợ, hoặc thử lại tại: bitenex://payment/{{ $('Set Variables').item.json.orderId }}"
+      },
+      "id": "send-sms",
+      "name": "SMS: Final Attempt",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [2220, 580]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/orders/{{ $('Set Variables').item.json.orderId }}/cancel",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "reason", "value": "Payment failed after multiple recovery attempts" }]
+        },
+        "options": {}
+      },
+      "id": "cancel-order",
+      "name": "Cancel: Order (Final)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2440, 580]
+    }
+  ],
+  "connections": {
+    "Webhook: payment.failed": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }, { "node": "Set Variables", "type": "main", "index": 0 }]] },
+    "Set Variables": { "main": [[{ "node": "Track: payment_failed", "type": "main", "index": 0 }]] },
+    "Track: payment_failed": { "main": [[{ "node": "Code: Error Message", "type": "main", "index": 0 }]] },
+    "Code: Error Message": { "main": [[{ "node": "Send: Payment Failure Push", "type": "main", "index": 0 }, { "node": "Send: Payment Failure Email", "type": "main", "index": 0 }]] },
+    "Send: Payment Failure Push": { "main": [[{ "node": "Wait 1 hour", "type": "main", "index": 0 }]] },
+    "Send: Payment Failure Email": { "main": [[{ "node": "Wait 1 hour", "type": "main", "index": 0 }]] },
+    "Wait 1 hour": { "main": [[{ "node": "Check: Payment Status", "type": "main", "index": 0 }]] },
+    "Check: Payment Status": { "main": [[{ "node": "IF: Payment Recovered?", "type": "main", "index": 0 }]] },
+    "IF: Payment Recovered?": {
+      "main": [
+        [{ "node": "Track: payment_recovered", "type": "main", "index": 0 }],
+        [{ "node": "IF: COD Available?", "type": "main", "index": 0 }]
+      ]
+    },
+    "IF: COD Available?": {
+      "main": [
+        [{ "node": "Offer: COD Alternative Push", "type": "main", "index": 0 }],
+        [{ "node": "SMS: Final Attempt", "type": "main", "index": 0 }]
+      ]
+    },
+    "SMS: Final Attempt": { "main": [[{ "node": "Cancel: Order (Final)", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
+  "tags": [{ "id": "tag-bitenex", "name": "bitenex" }, { "id": "tag-payment", "name": "payment-recovery" }],
+  "versionId": "wf06-v1"
+}
