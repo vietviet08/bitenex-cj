@@ -1,8 +1,9 @@
 # 🚀 Bitenex — Customer Journey Tracking & Automation Platform
 
 > **n8n Workflow Design Document**  
-> Phiên bản: 1.0 | Ngày: 2026-03-29  
-> Source of Truth: bitenex-api + bitenex-user
+> Phiên bản: 2.0 | Ngày: 2026-03-29  
+> Source of Truth: bitenex-api + bitenex-user  
+> **v2.0**: Switch nodes dùng `typeVersion: 1` để tương thích import JSON
 
 ---
 
@@ -195,10 +196,13 @@ flowchart TD
 ```
 
 **Nodes sử dụng**:
-- `Webhook`, `Set`, `Switch`
-- `HTTP Request` (push + in-app notification)
-- `Code` (format message theo status)
-- `Execute Workflow` (trigger WF-04 khi DELIVERED)
+- `Webhook` (trigger)
+- `Respond to Webhook` (async – trả lời ngay)
+- `Set` (biến)
+- `Switch v1` (string match 8 order status values)
+- `Code` (format message theo từng status)
+- `HTTP Request` (push notification + in-app save + event tracking)
+- `IF` (kiểm tra DELIVERED để trigger WF-04)
 
 **Payload webhook mẫu**:
 ```json
@@ -264,39 +268,33 @@ flowchart TD
 
 ## WF-05: Driver Dispatch & SLA Monitor
 
-**Mục tiêu**: Giám sát thời gian giao hàng, cảnh báo chậm trễ, và tự động leo thang vấn đề.
+**Mục tiêu**: Giám sát thời gian giao hàng theo chu kỳ 5 phút, phân loại độ trễ, và tự động cảnh báo driver/customer/ops.
 
-**Trigger**: Webhook `POST /webhook/bitenex/dispatch-assigned` + Cron mỗi 5 phút
+**Trigger**: Cron mỗi 5 phút (`*/5 * * * *`)
 
 ```mermaid
 flowchart TD
-    subgraph "Trigger 1: New Assignment"
-        A([🔔 dispatch.assigned]) --> B[Store: orderId, driverId\nestimatedDeliveryTime\nassignedAt in DB/store]
-    end
+    A([⏰ Cron: mỗi 5 phút]) --> B[GET /internal/orders/active-deliveries]
+    B --> C[Split In Batches: 20 đơn/batch]
+    C --> D[Code: Tính SLA\nelapsed = now - assignedAt\noverdue = elapsed - estimatedMinutes]
+    D --> E{Switch: slaStatus}
 
-    subgraph "Trigger 2: SLA Monitor Cron"
-        C([⏰ Cron: /5 phút]) --> D[HTTP Request:\nGET /internal/orders/active-deliveries]
-        D --> E[Loop: Duyệt từng đơn đang giao]
-        E --> F{Tính elapsed time\nelapsed > estimatedTime?}
-        F -- "✅ Trong SLA" --> G[No action]
-        F -- "⚠️ Trễ 10 phút" --> H[Push Alert Driver:\n⚡ Đẩy nhanh giao hàng!]
-        F -- "🚨 Trễ 20 phút" --> I[Push Alert to Customer:\n⏳ Xin lỗi, đơn hơi trễ\nĐền bù voucher 20K]
-        F -- "🔴 Trễ 30 phút" --> J[Slack #ops-alert:\nOrder over 30min SLA!\nAuto escalate]
-        H --> K[Track: sla_warning_driver]
-        I --> L[Issue Delay Voucher\nTrack: sla_compensation_sent]
-        J --> M[Create Escalation Record\nAssign to Ops Team]
-    end
+    E -- "warning: trễ 10 phút" --> F[Push Driver:\n⚡ Đẩy nhanh giao hàng!]
+    E -- "escalate: trễ 20 phút" --> G[Push Customer:\n⏳ Đơn hơi trễ, xin lỗi!]
+    G --> H[Issue Delay Voucher 20K\nGET /internal/marketing/issue-voucher]
+    E -- "critical: trễ 30+ phút" --> I[Slack #ops: 🔴 CRITICAL SLA!\nPOST to Slack Webhook]
+    I --> J[Track: sla_breach]
 ```
 
+> **Lưu ý**: `slaStatus` được tính bởi Code node (`on_time` / `warning` / `escalate` / `critical`).  
+> Switch dùng `typeVersion: 1` – string match trực tiếp trên `slaStatus`.
+
 **Nodes sử dụng**:
-- `Webhook` (initial capture)
-- `Schedule Trigger` (cron)
-- `HTTP Request` (active deliveries)
-- `Split In Batches` (loop orders)
-- `Code` (SLA calculation)
-- `IF`, `Switch` (thresholds)
-- `Slack` (ops alerts)
-- `Postgres` (store SLA records)
+- `Schedule Trigger` (cron `*/5 * * * *`)
+- `HTTP Request` (GET active deliveries, POST voucher, POST Slack)
+- `Split In Batches` (20 đơn/batch)
+- `Code` (tính elapsed/overdue time, gán `slaStatus` string)
+- `Switch v1` (string match: `warning` / `escalate` / `critical`)
 
 ---
 
@@ -383,49 +381,46 @@ flowchart TD
 
 ## WF-08: Win-back Lapsed Users
 
-**Mục tiêu**: Re-engage người dùng không hoạt động trong 7, 14, và 30 ngày.
+**Mục tiêu**: Re-engage người dùng không hoạt động trong 7, 14, và 30 ngày với voucher và nội dung tăng dần.
 
 **Trigger**: Cron `0 10 * * *` (10:00 sáng mỗi ngày)
 
 ```mermaid
 flowchart TD
     A([⏰ Cron 10:00 Daily]) --> B[GET /internal/users/lapsed\nParams: segments=7d,14d,30d]
-    B --> C[Split Users by Segment]
+    B --> C[Split In Batches: 50 users/batch]
+    C --> D[Code: Set Segment\nlapsedDays <= 7 → '7d'\nlapsedDays <= 14 → '14d'\nlapsedDays > 14 → '30d']
+    D --> E{Switch v1: lapsedSegment}
 
-    C --> D["Segment: 7-day lapsed"]
-    C --> E["Segment: 14-day lapsed"]
-    C --> F["Segment: 30-day lapsed"]
+    E -- "'7d'" --> F[GET Last Order]
+    F --> G[Issue Voucher 20K\nPush: Đặt lại món yêu thích!]
 
-    D --> G[Personalize: Fetch last order\nmerchant + items]
-    G --> H[Push: Miss you! 🍜\nThử lại món yêu thích?\nVoucher 20K]
-    H --> I[Track: winback_7d_sent]
+    E -- "'14d'" --> H[Issue Voucher 35K\nEmail: COMEBACK35K]
 
-    E --> J[Personalize: Fetch fav cuisine\nbrowsing history]
-    J --> K[Email: Curated recommendations\n+ Voucher 35K]
-    K --> L[Track: winback_14d_sent]
+    E -- "'30d'" --> I[Issue Voucher 50K + 3 ship miễn phí\nPush: Lâu rồi chưa gặp 💔]
 
-    F --> M[Full Win-back Campaign]
-    M --> N[Push: Lâu rồi chưa gặp 💔\nBitenex nhớ bạn!]
-    N --> O[Email: Premium Voucher 50K\n+ Free delivery 3 orders]
-    O --> P[Wait 3 ngày]
-    P --> Q{Did User Return?}
-    Q -- "✅ Returned" --> R[Track: winback_success\nRemove from lapsed segment]
-    Q -- "❌ Still Lapsed" --> S[Tag: churned_user\nReduce email frequency\nEnd ○]
+    G --> J[Wait 3 ngày]
+    H --> J
+    I --> J
 
-    I --> T[Analytics: Winback Funnel]
-    L --> T
-    R --> T
+    J --> K[GET /internal/users/:id/activity]
+    K --> L{IF: hasOrdered = true?}
+    L -- "✅ Quay lại" --> M[Track: winback_success]
+    L -- "❌ Vẫn lapse" --> N[Tag: churned_user]
 ```
 
+> **Lưu ý**: Code node convert `lapsedDays` (số) → `lapsedSegment` (string `'7d'`/`'14d'`/`'30d'`),  
+> sau đó Switch `typeVersion: 1` match string để route đúng luồng. Không cần Switch v3 phức tạp.
+
 **Nodes sử dụng**:
-- `Schedule Trigger`
-- `HTTP Request` (lapsed users, last orders, preferences)
-- `Split In Batches`
-- `Code` (personalization logic)
-- `Send Email` (curated HTML)
-- `IF`, `Switch`
-- `Wait`
-- `Merge`
+- `Schedule Trigger` (cron `0 10 * * *`)
+- `HTTP Request` (GET lapsed users, GET last order, POST voucher, GET activity)
+- `Split In Batches` (50 users/batch)
+- `Code` (convert `lapsedDays` → `lapsedSegment` string)
+- `Switch v1` (string match: `'7d'` / `'14d'` / `'30d'`)
+- `Send Email` (HTML voucher template cho 14d)
+- `Wait` (3 ngày)
+- `IF` (kiểm tra user đã quay lại chưa)
 
 ---
 

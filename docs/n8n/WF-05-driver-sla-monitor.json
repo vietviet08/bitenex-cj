@@ -27,6 +27,7 @@
     },
     {
       "parameters": {
+        "batchSize": 20,
         "options": {}
       },
       "id": "split-deliveries",
@@ -47,19 +48,21 @@
     },
     {
       "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.slaStatus }}",
         "rules": {
           "rules": [
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.slaStatus }}", "rightValue": "warning", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 0 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.slaStatus }}", "rightValue": "escalate", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 1 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.slaStatus }}", "rightValue": "critical", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 2 }
+            { "value2": "warning" },
+            { "value2": "escalate" },
+            { "value2": "critical" }
           ]
         },
-        "fallbackOutput": "none"
+        "fallbackOutput": 0
       },
       "id": "switch-sla",
       "name": "Switch: SLA Status",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
+      "typeVersion": 1,
       "position": [1120, 400]
     },
     {
@@ -131,7 +134,7 @@
         "url": "={{ $env.BITENEX_SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER' }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ text: '🔴 CRITICAL SLA BREACH!', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: `*Order:* ${$json.orderNumber}\\n*Driver:* ${$json.driverId}\\n*Overdue:* ${$json.overdueMinutes} minutes\\n*User:* ${$json.userId}\\n*Action Required: Ops Team Escalation*` } }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ text: '🔴 CRITICAL SLA BREACH!', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: `*Order:* ${$json.orderNumber}\\n*Driver:* ${$json.driverId}\\n*Overdue:* ${$json.overdueMinutes} minutes\\n*User:* ${$json.userId}` } }] }) }}",
         "options": {}
       },
       "id": "slack-critical",
@@ -179,5 +182,5 @@
   "pinData": {},
   "settings": { "executionOrder": "v1", "saveManualExecutions": true },
   "tags": [{ "id": "tag-bitenex", "name": "bitenex" }, { "id": "tag-sla", "name": "sla-monitor" }],
-  "versionId": "wf05-v1"
+  "versionId": "wf05-v2"
 }
