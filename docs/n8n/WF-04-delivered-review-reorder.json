@@ -99,7 +99,8 @@
     {
       "parameters": {
         "conditions": {
-          "conditions": [{ "leftValue": "={{ $json.hasReview }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "rev1", "leftValue": "={{ $json.hasReview }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
           "combinator": "and"
         }
       },
@@ -112,7 +113,8 @@
     {
       "parameters": {
         "conditions": {
-          "conditions": [{ "leftValue": "={{ $json.averageRating }}", "rightValue": 4, "operator": { "type": "number", "operation": "gte" } }],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "rat1", "leftValue": "={{ $json.averageRating }}", "rightValue": 4, "operator": { "type": "number", "operation": "gte" } }],
           "combinator": "and"
         }
       },
@@ -218,7 +220,8 @@
     {
       "parameters": {
         "conditions": {
-          "conditions": [{ "leftValue": "={{ $json.hasReordered }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "reord1", "leftValue": "={{ $json.hasReordered }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
           "combinator": "and"
         }
       },
