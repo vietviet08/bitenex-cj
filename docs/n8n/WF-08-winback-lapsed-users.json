@@ -19,7 +19,10 @@
         "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
         "sendQuery": true,
         "queryParameters": {
-          "parameters": [{ "name": "segments", "value": "7d,14d,30d" }, { "name": "limit", "value": "500" }]
+          "parameters": [
+            { "name": "segments", "value": "7d,14d,30d" },
+            { "name": "limit", "value": "500" }
+          ]
         },
         "options": {}
       },
@@ -30,7 +33,10 @@
       "position": [460, 400]
     },
     {
-      "parameters": { "batchSize": 50, "options": {} },
+      "parameters": {
+        "batchSize": 50,
+        "options": {}
+      },
       "id": "batch-users",
       "name": "Split In Batches (50)",
       "type": "n8n-nodes-base.splitInBatches",
@@ -39,20 +45,32 @@
     },
     {
       "parameters": {
+        "jsCode": "const d = $input.item.json.lapsedDays || 0;\nlet lapsedSegment = '30d';\nif (d <= 7) lapsedSegment = '7d';\nelse if (d <= 14) lapsedSegment = '14d';\nreturn [{ json: { ...$input.item.json, lapsedSegment } }];"
+      },
+      "id": "code-segment",
+      "name": "Code: Set Segment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.lapsedSegment }}",
         "rules": {
           "rules": [
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.lapsedDays }}", "rightValue": 7, "operator": { "type": "number", "operation": "lte" } }], "combinator": "and" }, "output": 0 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.lapsedDays }}", "rightValue": 14, "operator": { "type": "number", "operation": "lte" } }], "combinator": "and" }, "output": 1 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.lapsedDays }}", "rightValue": 14, "operator": { "type": "number", "operation": "gt" } }], "combinator": "and" }, "output": 2 }
+            { "value2": "7d" },
+            { "value2": "14d" },
+            { "value2": "30d" }
           ]
         },
-        "fallbackOutput": "none"
+        "fallbackOutput": 2
       },
       "id": "switch-segment",
       "name": "Switch: Lapsed Segment",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
-      "position": [900, 400]
+      "typeVersion": 1,
+      "position": [1120, 400]
     },
     {
       "parameters": {
@@ -64,27 +82,6 @@
       },
       "id": "get-last-order-7d",
       "name": "GET: Last Order (7d)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1120, 220]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $json.userId }}" },
-            { "name": "title", "value": "🍜 Có một món đang chờ bạn!" },
-            { "name": "body", "value": "Lần trước bạn thích {{ $json.merchantName }}. Đặt lại với voucher 20K ngay hôm nay!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'winback_7d', voucherCode: 'MISSED20K', deepLink: 'bitenex://home' }) }}" }
-          ]
-        },
-        "options": {}
-      },
-      "id": "push-7d",
-      "name": "Push: 7-day Winback",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1340, 220]
@@ -108,35 +105,28 @@
       "name": "Issue: Voucher 20K (7d)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1340, 140]
+      "position": [1560, 180]
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/users/{{ $json.userId }}/preferences",
-        "sendHeaders": true,
-        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
-        "options": { "response": { "response": { "neverError": true } } }
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "title", "value": "🍜 Có một món đang chờ bạn!" },
+            { "name": "body", "value": "Lần trước bạn thích {{ $json.merchantName }}. Đặt lại với voucher 20K ngay hôm nay!" },
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'winback_7d', voucherCode: 'MISSED20K', deepLink: 'bitenex://home' }) }}" }
+          ]
+        },
+        "options": {}
       },
-      "id": "get-prefs-14d",
-      "name": "GET: User Preferences (14d)",
+      "id": "push-7d",
+      "name": "Push: 7-day Winback",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 400]
-    },
-    {
-      "parameters": {
-        "fromEmail": "noreply@bitenex.vn",
-        "toEmail": "={{ $json.email }}",
-        "subject": "🌟 Chúng tôi nhớ bạn! Khám phá món mới với ưu đãi 35K",
-        "emailType": "html",
-        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><div style='background: linear-gradient(135deg, #FF6B35, #c0392b); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;'><h1 style='color: white; margin: 0;'>💕 Chúng tôi nhớ bạn!</h1><p style='color: rgba(255,255,255,0.9);'>Đã lâu rồi chưa gặp...</p></div><div style='background: white; padding: 24px; border-radius: 0 0 12px 12px;'><p>Bitenex có nhiều nhà hàng mới và món ăn hot tại {{ $json.city }} đang chờ bạn khám phá!</p><div style='background: #fff9f0; border: 2px dashed #FF6B35; padding: 16px; border-radius: 8px; text-align: center; margin: 20px 0;'><p style='font-size: 20px; color: #FF6B35; font-weight: bold; margin: 0;'>🎁 VOUCHER GIẢM 35.000Đ</p><p style='font-size: 14px; color: #666;'>Mã: <strong>COMEBACK35K</strong> | Hết hạn: 5 ngày</p></div><a href='bitenex://home' style='display: block; background: #FF6B35; color: white; padding: 14px 24px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold; font-size: 16px;'>Khám phá ngay →</a></div></body></html>"
-      },
-      "id": "email-14d",
-      "name": "Email: 14-day Winback",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [1340, 400]
+      "position": [1560, 280]
     },
     {
       "parameters": {
@@ -157,28 +147,21 @@
       "name": "Issue: Voucher 35K (14d)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 480]
+      "position": [1340, 400]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $json.userId }}" },
-            { "name": "title", "value": "💔 Lâu rồi chưa gặp..." },
-            { "name": "body", "value": "Bitenex nhớ bạn! Tặng ngay 50K + ship miễn phí 3 đơn để chào đón bạn quay lại 🎉" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'winback_30d', voucherCode: 'BACK50K', deepLink: 'bitenex://home' }) }}" }
-          ]
-        },
-        "options": {}
+        "fromEmail": "noreply@bitenex.vn",
+        "toEmail": "={{ $json.email }}",
+        "subject": "🌟 Chúng tôi nhớ bạn! Khám phá món mới với ưu đãi 35K",
+        "emailType": "html",
+        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><div style='background: linear-gradient(135deg, #FF6B35, #c0392b); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;'><h1 style='color: white; margin: 0;'>💕 Chúng tôi nhớ bạn!</h1></div><div style='background: white; padding: 24px; border-radius: 0 0 12px 12px;'><p>Bitenex có nhiều nhà hàng mới và món ăn hot đang chờ bạn!</p><div style='background: #fff9f0; border: 2px dashed #FF6B35; padding: 16px; border-radius: 8px; text-align: center; margin: 20px 0;'><p style='font-size: 20px; color: #FF6B35; font-weight: bold; margin: 0;'>🎁 VOUCHER GIẢM 35.000Đ</p><p style='font-size: 14px; color: #666;'>Mã: <strong>COMEBACK35K</strong> | Hết hạn: 5 ngày</p></div><a href='bitenex://home' style='display: block; background: #FF6B35; color: white; padding: 14px 24px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold;'>Khám phá ngay →</a></div></body></html>"
       },
-      "id": "push-30d",
-      "name": "Push: 30-day Premium Winback",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1120, 620]
+      "id": "email-14d",
+      "name": "Email: 14-day Winback",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1560, 400]
     },
     {
       "parameters": {
@@ -200,9 +183,30 @@
       "name": "Issue: Voucher 50K (30d)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1340, 620]
+      "position": [1340, 600]
     },
-    { "parameters": { "amount": 3, "unit": "days" }, "id": "wait-3d-wb", "name": "Wait 3 days", "type": "n8n-nodes-base.wait", "typeVersion": 1.1, "position": [1560, 400] },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "userId", "value": "={{ $json.userId }}" },
+            { "name": "title", "value": "💔 Lâu rồi chưa gặp..." },
+            { "name": "body", "value": "Bitenex nhớ bạn! Tặng ngay 50K + ship miễn phí 3 đơn để chào đón bạn quay lại 🎉" },
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'winback_30d', voucherCode: 'BACK50K', deepLink: 'bitenex://home' }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "push-30d",
+      "name": "Push: 30-day Premium Winback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 600]
+    },
+    { "parameters": { "amount": 3, "unit": "days" }, "id": "wait-3d-wb", "name": "Wait 3 days", "type": "n8n-nodes-base.wait", "typeVersion": 1.1, "position": [1780, 400] },
     {
       "parameters": {
         "method": "GET",
@@ -215,12 +219,13 @@
       "name": "Check: User Returned?",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1780, 400]
+      "position": [2000, 400]
     },
     {
       "parameters": {
         "conditions": {
-          "conditions": [{ "leftValue": "={{ $json.hasOrdered }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "ret1", "leftValue": "={{ $json.hasOrdered }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
           "combinator": "and"
         }
       },
@@ -228,7 +233,7 @@
       "name": "IF: User Returned?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2000, 400]
+      "position": [2220, 400]
     },
     {
       "parameters": {
@@ -239,7 +244,7 @@
           "parameters": [
             { "name": "event", "value": "winback_success" },
             { "name": "userId", "value": "={{ $json.userId }}" },
-            { "name": "properties", "value": "={{ JSON.stringify({ segment: $json.lapsedSegment }) }}" }
+            { "name": "properties", "value": "={{ JSON.stringify({ lapsedSegment: $json.lapsedSegment }) }}" }
           ]
         },
         "options": {}
@@ -248,7 +253,7 @@
       "name": "Track: winback_success",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2220, 280]
+      "position": [2440, 280]
     },
     {
       "parameters": {
@@ -268,27 +273,28 @@
       "name": "Tag: churned_user",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2220, 520]
+      "position": [2440, 520]
     }
   ],
   "connections": {
     "Cron: 10:00 Daily": { "main": [[{ "node": "GET: Lapsed Users", "type": "main", "index": 0 }]] },
     "GET: Lapsed Users": { "main": [[{ "node": "Split In Batches (50)", "type": "main", "index": 0 }]] },
-    "Split In Batches (50)": { "main": [[{ "node": "Switch: Lapsed Segment", "type": "main", "index": 0 }]] },
+    "Split In Batches (50)": { "main": [[{ "node": "Code: Set Segment", "type": "main", "index": 0 }]] },
+    "Code: Set Segment": { "main": [[{ "node": "Switch: Lapsed Segment", "type": "main", "index": 0 }]] },
     "Switch: Lapsed Segment": {
       "main": [
         [{ "node": "GET: Last Order (7d)", "type": "main", "index": 0 }],
-        [{ "node": "GET: User Preferences (14d)", "type": "main", "index": 0 }],
-        [{ "node": "Push: 30-day Premium Winback", "type": "main", "index": 0 }]
+        [{ "node": "Issue: Voucher 35K (14d)", "type": "main", "index": 0 }],
+        [{ "node": "Issue: Voucher 50K (30d)", "type": "main", "index": 0 }]
       ]
     },
-    "GET: Last Order (7d)": { "main": [[{ "node": "Issue: Voucher 20K (7d)", "type": "main", "index": 0 }, { "node": "Push: 7-day Winback", "type": "main", "index": 0 }]] },
+    "GET: Last Order (7d)": { "main": [[{ "node": "Issue: Voucher 20K (7d)", "type": "main", "index": 0 }]] },
+    "Issue: Voucher 20K (7d)": { "main": [[{ "node": "Push: 7-day Winback", "type": "main", "index": 0 }]] },
     "Push: 7-day Winback": { "main": [[{ "node": "Wait 3 days", "type": "main", "index": 0 }]] },
-    "GET: User Preferences (14d)": { "main": [[{ "node": "Issue: Voucher 35K (14d)", "type": "main", "index": 0 }]] },
     "Issue: Voucher 35K (14d)": { "main": [[{ "node": "Email: 14-day Winback", "type": "main", "index": 0 }]] },
     "Email: 14-day Winback": { "main": [[{ "node": "Wait 3 days", "type": "main", "index": 0 }]] },
-    "Push: 30-day Premium Winback": { "main": [[{ "node": "Issue: Voucher 50K (30d)", "type": "main", "index": 0 }]] },
-    "Issue: Voucher 50K (30d)": { "main": [[{ "node": "Wait 3 days", "type": "main", "index": 0 }]] },
+    "Issue: Voucher 50K (30d)": { "main": [[{ "node": "Push: 30-day Premium Winback", "type": "main", "index": 0 }]] },
+    "Push: 30-day Premium Winback": { "main": [[{ "node": "Wait 3 days", "type": "main", "index": 0 }]] },
     "Wait 3 days": { "main": [[{ "node": "Check: User Returned?", "type": "main", "index": 0 }]] },
     "Check: User Returned?": { "main": [[{ "node": "IF: User Returned?", "type": "main", "index": 0 }]] },
     "IF: User Returned?": {
@@ -301,5 +307,5 @@
   "pinData": {},
   "settings": { "executionOrder": "v1", "saveManualExecutions": true },
   "tags": [{ "id": "tag-bitenex", "name": "bitenex" }, { "id": "tag-winback", "name": "win-back" }],
-  "versionId": "wf08-v1"
+  "versionId": "wf08-v2"
 }

@@ -48,24 +48,26 @@
     },
     {
       "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.toStatus }}",
         "rules": {
           "rules": [
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "CONFIRMED", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 0 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "PREPARING", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 1 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "READY", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 2 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "PICKING_UP", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 3 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "DELIVERING", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 4 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "DELIVERED", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 5 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "CANCELLED", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 6 },
-            { "conditions": { "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "REFUNDED", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "output": 7 }
+            { "value2": "CONFIRMED" },
+            { "value2": "PREPARING" },
+            { "value2": "READY" },
+            { "value2": "PICKING_UP" },
+            { "value2": "DELIVERING" },
+            { "value2": "DELIVERED" },
+            { "value2": "CANCELLED" },
+            { "value2": "REFUNDED" }
           ]
         },
-        "fallbackOutput": "none"
+        "fallbackOutput": 0
       },
       "id": "switch-status",
       "name": "Switch: Order Status",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
+      "typeVersion": 1,
       "position": [680, 400]
     },
     {
@@ -133,7 +135,8 @@
     {
       "parameters": {
         "conditions": {
-          "conditions": [{ "leftValue": "={{ $json.toStatus }}", "rightValue": "DELIVERED", "operator": { "type": "string", "operation": "equals" } }],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "del1", "leftValue": "={{ $json.toStatus }}", "rightValue": "DELIVERED", "operator": { "type": "string", "operation": "equals" } }],
           "combinator": "and"
         }
       },
@@ -239,5 +242,5 @@
   "pinData": {},
   "settings": { "executionOrder": "v1", "saveManualExecutions": true },
   "tags": [{ "id": "tag-bitenex", "name": "bitenex" }, { "id": "tag-order", "name": "order-lifecycle" }],
-  "versionId": "wf03-v1"
+  "versionId": "wf03-v2"
 }
