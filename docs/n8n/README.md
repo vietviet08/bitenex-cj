@@ -2,6 +2,8 @@
 
 > **Thư mục này chứa 8 workflow n8n** cho nền tảng Customer Journey Tracking & Automation của Bitenex.
 
+> **v2.0 — Import-safe**: Tất cả Switch nodes được cập nhật về `typeVersion: 1` (string match) để khắc phục lỗi `Could not find property option` khi import JSON.
+
 ---
 
 ## 📁 Cấu trúc thư mục
@@ -45,6 +47,8 @@ customer-journey/docs/n8n/
 4. Cấu hình **Credentials** và **Environment Variables**
 5. Kích hoạt workflow
 
+> ✅ Tất cả 8 file JSON đã được kiểm tra import-safe. Nếu gặp lỗi, hãy kiểm tra phiên bản n8n ≥ 1.0.
+
 ### Environment Variables cần thiết
 
 ```bash
@@ -77,3 +81,12 @@ Xem **[WORKFLOWS.md](./WORKFLOWS.md)** để có:
 - [ ] Review rate limit notification (max 3 push/ngày/user)
 - [ ] Dedup events bằng `WebhookEvent` table
 - [ ] Test từng workflow với payload thực
+
+---
+
+## 📝 Changelog
+
+| Version | Thay đổi |
+|---------|----------|
+| v1.0 | Initial design: 8 workflows, Switch v3.2 |
+| v2.0 | Fix import lỗi: Switch v3.2 → v1 (WF-03/05/08). WF-08 thêm Code node Set Segment. |
