@@ -117,7 +117,7 @@
             { "name": "userId", "value": "={{ $json.userId }}" },
             { "name": "title", "value": "🍜 Có một món đang chờ bạn!" },
             { "name": "body", "value": "Lần trước bạn thích {{ $json.merchantName }}. Đặt lại với voucher 20K ngay hôm nay!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'winback_7d', voucherCode: 'MISSED20K', deepLink: 'bitenex://home' }) }}" }
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'winback_7d', voucherCode: 'MISSED20K', deepLink: 'bitenexuser://home' }) }}" }
           ]
         },
         "options": {}
@@ -155,7 +155,7 @@
         "toEmail": "={{ $json.email }}",
         "subject": "🌟 Chúng tôi nhớ bạn! Khám phá món mới với ưu đãi 35K",
         "emailType": "html",
-        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><div style='background: linear-gradient(135deg, #FF6B35, #c0392b); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;'><h1 style='color: white; margin: 0;'>💕 Chúng tôi nhớ bạn!</h1></div><div style='background: white; padding: 24px; border-radius: 0 0 12px 12px;'><p>Bitenex có nhiều nhà hàng mới và món ăn hot đang chờ bạn!</p><div style='background: #fff9f0; border: 2px dashed #FF6B35; padding: 16px; border-radius: 8px; text-align: center; margin: 20px 0;'><p style='font-size: 20px; color: #FF6B35; font-weight: bold; margin: 0;'>🎁 VOUCHER GIẢM 35.000Đ</p><p style='font-size: 14px; color: #666;'>Mã: <strong>COMEBACK35K</strong> | Hết hạn: 5 ngày</p></div><a href='bitenex://home' style='display: block; background: #FF6B35; color: white; padding: 14px 24px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold;'>Khám phá ngay →</a></div></body></html>"
+        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><div style='background: linear-gradient(135deg, #FF6B35, #c0392b); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;'><h1 style='color: white; margin: 0;'>💕 Chúng tôi nhớ bạn!</h1></div><div style='background: white; padding: 24px; border-radius: 0 0 12px 12px;'><p>Bitenex có nhiều nhà hàng mới và món ăn hot đang chờ bạn!</p><div style='background: #fff9f0; border: 2px dashed #FF6B35; padding: 16px; border-radius: 8px; text-align: center; margin: 20px 0;'><p style='font-size: 20px; color: #FF6B35; font-weight: bold; margin: 0;'>🎁 VOUCHER GIẢM 35.000Đ</p><p style='font-size: 14px; color: #666;'>Mã: <strong>COMEBACK35K</strong> | Hết hạn: 5 ngày</p></div><a href='bitenexuser://home' style='display: block; background: #FF6B35; color: white; padding: 14px 24px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: bold;'>Khám phá ngay →</a></div></body></html>"
       },
       "id": "email-14d",
       "name": "Email: 14-day Winback",
@@ -195,7 +195,7 @@
             { "name": "userId", "value": "={{ $json.userId }}" },
             { "name": "title", "value": "💔 Lâu rồi chưa gặp..." },
             { "name": "body", "value": "Bitenex nhớ bạn! Tặng ngay 50K + ship miễn phí 3 đơn để chào đón bạn quay lại 🎉" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'winback_30d', voucherCode: 'BACK50K', deepLink: 'bitenex://home' }) }}" }
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'winback_30d', voucherCode: 'BACK50K', deepLink: 'bitenexuser://home' }) }}" }
           ]
         },
         "options": {}
