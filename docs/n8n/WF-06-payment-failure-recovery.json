@@ -85,7 +85,7 @@
             { "name": "userId", "value": "={{ $json.userId }}" },
             { "name": "title", "value": "={{ $json.notification.title }}" },
             { "name": "body", "value": "={{ $json.notification.body }}" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'payment_failed', orderId: $json.orderId, deepLink: 'bitenex://payment/' + $json.orderId }) }}" }
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'payment_failed', orderId: $json.orderId, deepLink: 'bitenexuser://payment/' + $json.orderId }) }}" }
           ]
         },
         "options": {}
@@ -102,7 +102,7 @@
         "toEmail": "={{ $json.email }}",
         "subject": "❌ Thanh toán thất bại - Đơn hàng của bạn",
         "emailType": "html",
-        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><h2 style='color: #e74c3c;'>Thanh toán không thành công</h2><p>{{ $json.notification.body }}</p><p>Đơn hàng của bạn đang chờ thanh toán. Hãy thử lại để không bỏ lỡ bữa ăn!</p><a href='bitenex://payment/{{ $json.orderId }}' style='display: inline-block; background: #FF6B35; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;'>Thử lại thanh toán →</a><p style='margin-top: 24px; color: #666; font-size: 14px;'>Cần hỗ trợ? Liên hệ: support@bitenex.vn hoặc 1800-BITENEX</p></body></html>"
+        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><h2 style='color: #e74c3c;'>Thanh toán không thành công</h2><p>{{ $json.notification.body }}</p><p>Đơn hàng của bạn đang chờ thanh toán. Hãy thử lại để không bỏ lỡ bữa ăn!</p><a href='bitenexuser://payment/{{ $json.orderId }}' style='display: inline-block; background: #FF6B35; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;'>Thử lại thanh toán →</a><p style='margin-top: 24px; color: #666; font-size: 14px;'>Cần hỗ trợ? Liên hệ: support@bitenex.vn hoặc 1800-BITENEX</p></body></html>"
       },
       "id": "send-failure-email",
       "name": "Send: Payment Failure Email",
@@ -180,7 +180,7 @@
             { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
             { "name": "title", "value": "💵 Thanh toán tiền mặt?" },
             { "name": "body", "value": "Bạn có thể đổi sang thanh toán tiền mặt khi nhận hàng (COD). Đặt ngay!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'cod_offer', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenex://payment/' + $('Set Variables').item.json.orderId }) }}" }
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'cod_offer', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenexuser://payment/' + $('Set Variables').item.json.orderId }) }}" }
           ]
         },
         "options": {}
@@ -196,7 +196,7 @@
         "fromEmail": "noreply@bitenex.vn",
         "toEmail": "={{ $('Set Variables').item.json.phone }}",
         "subject": "Bitenex Support - Thanh toán thất bại",
-        "message": "=Chào bạn, thanh toán đơn hàng của bạn bị lỗi. Gọi ngay hotline 1800-BITENEX để được hỗ trợ, hoặc thử lại tại: bitenex://payment/{{ $('Set Variables').item.json.orderId }}"
+        "message": "=Chào bạn, thanh toán đơn hàng của bạn bị lỗi. Gọi ngay hotline 1800-BITENEX để được hỗ trợ, hoặc thử lại tại: bitenexuser://payment/{{ $('Set Variables').item.json.orderId }}"
       },
       "id": "send-sms",
       "name": "SMS: Final Attempt",

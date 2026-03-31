@@ -31,7 +31,7 @@
             { "id": "3", "name": "merchantName", "value": "={{ $json.body.merchantName }}", "type": "string" },
             { "id": "4", "name": "cartValue", "value": "={{ $json.body.cartValue }}", "type": "number" },
             { "id": "5", "name": "currency", "value": "={{ $json.body.currency || 'VND' }}", "type": "string" },
-            { "id": "6", "name": "deepLink", "value": "={{ $json.body.deepLink || 'bitenex://checkout' }}", "type": "string" },
+            { "id": "6", "name": "deepLink", "value": "={{ $json.body.deepLink || 'bitenexuser://checkout' }}", "type": "string" },
             { "id": "7", "name": "email", "value": "={{ $json.body.email }}", "type": "string" },
             { "id": "8", "name": "phone", "value": "={{ $json.body.phone }}", "type": "string" }
           ]

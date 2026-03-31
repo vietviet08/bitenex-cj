@@ -33,8 +33,8 @@
             { "id": "5", "name": "driverId", "value": "={{ $json.body.driverId }}", "type": "string" },
             { "id": "6", "name": "total", "value": "={{ $json.body.total }}", "type": "number" },
             { "id": "7", "name": "email", "value": "={{ $json.body.email }}", "type": "string" },
-            { "id": "8", "name": "deepLinkReview", "value": "bitenex://order/food-rating", "type": "string" },
-            { "id": "9", "name": "deepLinkReorder", "value": "bitenex://home", "type": "string" }
+            { "id": "8", "name": "deepLinkReview", "value": "bitenexuser://order/food-rating", "type": "string" },
+            { "id": "9", "name": "deepLinkReorder", "value": "bitenexuser://home", "type": "string" }
           ]
         },
         "options": {}
@@ -56,7 +56,7 @@
             { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
             { "name": "title", "value": "⭐ Bạn cảm thấy thế nào?" },
             { "name": "body", "value": "Đánh giá tài xế và {{ $('Set Variables').item.json.merchantName }} để tích điểm thưởng!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'review_request', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenex://order/food-rating' }) }}" }
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'review_request', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenexuser://order/food-rating' }) }}" }
           ]
         },
         "options": {}
@@ -73,7 +73,7 @@
         "toEmail": "={{ $('Set Variables').item.json.email }}",
         "subject": "⭐ Đánh giá đơn hàng tại {{ $('Set Variables').item.json.merchantName }}",
         "emailType": "html",
-        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #fff;'><div style='background: linear-gradient(135deg, #FF6B35, #FF4500); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;'><h1 style='color: white; margin: 0;'>🍜 Chúc ngon miệng!</h1></div><div style='padding: 24px;'><p>Đơn hàng của bạn tại <strong>{{ $('Set Variables').item.json.merchantName }}</strong> đã được giao thành công. Bạn cảm thấy thế nào?</p><div style='text-align: center; margin: 24px 0;'><p style='font-size: 24px; margin: 8px 0;'>⭐⭐⭐⭐⭐</p><a href='bitenex://order/food-rating' style='display: inline-block; background: #FF6B35; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;'>Đánh giá ngay (1 phút)</a></div><p style='color: #666; font-size: 14px;'>Mỗi đánh giá của bạn giúp cải thiện chất lượng dịch vụ và tích lũy điểm thưởng 🎁</p></div></body></html>"
+        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #fff;'><div style='background: linear-gradient(135deg, #FF6B35, #FF4500); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;'><h1 style='color: white; margin: 0;'>🍜 Chúc ngon miệng!</h1></div><div style='padding: 24px;'><p>Đơn hàng của bạn tại <strong>{{ $('Set Variables').item.json.merchantName }}</strong> đã được giao thành công. Bạn cảm thấy thế nào?</p><div style='text-align: center; margin: 24px 0;'><p style='font-size: 24px; margin: 8px 0;'>⭐⭐⭐⭐⭐</p><a href='bitenexuser://order/food-rating' style='display: inline-block; background: #FF6B35; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;'>Đánh giá ngay (1 phút)</a></div><p style='color: #666; font-size: 14px;'>Mỗi đánh giá của bạn giúp cải thiện chất lượng dịch vụ và tích lũy điểm thưởng 🎁</p></div></body></html>"
       },
       "id": "send-review-email",
       "name": "Send: Review Request Email",
@@ -155,7 +155,7 @@
             { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
             { "name": "title", "value": "🎉 Cảm ơn bạn đã đánh giá!" },
             { "name": "body", "value": "Tặng bạn voucher 30K cho lần đặt tiếp theo tại {{ $('Set Variables').item.json.merchantName }} 🍜" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'reorder_voucher', voucherCode: 'REORDER30K', deepLink: 'bitenex://home' }) }}" }
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'reorder_voucher', voucherCode: 'REORDER30K', deepLink: 'bitenexuser://home' }) }}" }
           ]
         },
         "options": {}
@@ -191,7 +191,7 @@
             { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
             { "name": "title", "value": "📝 Nhắc nhở: Đánh giá đơn hàng" },
             { "name": "body", "value": "Chỉ 1 phút đánh giá để tích điểm thưởng từ {{ $('Set Variables').item.json.merchantName }}!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'review_reminder', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenex://order/food-rating' }) }}" }
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'review_reminder', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenexuser://order/food-rating' }) }}" }
           ]
         },
         "options": {}
@@ -260,7 +260,7 @@
             { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
             { "name": "title", "value": "🍜 Đặt lại lần nữa nhé?" },
             { "name": "body", "value": "Còn nhớ {{ $('Set Variables').item.json.merchantName }}? Đặt lại ngay với voucher 30K còn hiệu lực!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'reorder_reminder', deepLink: 'bitenex://home' }) }}" }
+            { "name": "data", "value": "={{ JSON.stringify({ type: 'reorder_reminder', deepLink: 'bitenexuser://home' }) }}" }
           ]
         },
         "options": {}
