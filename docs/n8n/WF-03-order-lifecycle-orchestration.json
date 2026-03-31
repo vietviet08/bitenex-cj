@@ -94,7 +94,7 @@
             { "name": "userId", "value": "={{ $json.userId }}" },
             { "name": "title", "value": "={{ $json.notification.title }}" },
             { "name": "body", "value": "={{ $json.notification.body }}" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: $json.notification.type, orderId: $json.orderId, deepLink: 'bitenex://order/' + $json.orderId }) }}" }
+            { "name": "data", "value": "={{ JSON.stringify({ type: $json.notification.type, orderId: $json.orderId, deepLink: 'bitenexuser://order/' + $json.orderId }) }}" }
           ]
         },
         "options": {}

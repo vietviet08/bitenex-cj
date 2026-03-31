@@ -51,20 +51,13 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }]
+          "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}" }]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "event", "value": "user_registered" },
-            { "name": "userId", "value": "={{ $json.userId }}" },
-            { "name": "properties", "value": "={{ JSON.stringify({ city: $json.city, platform: $json.platform }) }}" }
-          ]
-        },
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ event: 'user_registered', userId: $json.userId, properties: { city: $json.city, platform: $json.platform } }) }}",
         "options": { "response": { "response": { "neverError": true } } }
       },
       "id": "track-registered",
@@ -76,10 +69,10 @@
     {
       "parameters": {
         "fromEmail": "noreply@bitenex.vn",
-        "toEmail": "={{ $json.email }}",
-        "subject": "🎉 Chào mừng {{ $json.firstName }} đến với Bitenex!",
+        "toEmail": "={{ $('Set Variables').item.json.email }}",
+        "subject": "🎉 Chào mừng {{ $('Set Variables').item.json.firstName }} đến với Bitenex!",
         "emailType": "html",
-        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><h1 style='color: #FF6B35;'>Chào {{ $json.firstName }}! 👋</h1><p>Bạn đã gia nhập Bitenex — ứng dụng giao đồ ăn nhanh nhất tại {{ $json.city }}!</p><p>🍜 Khám phá hàng trăm nhà hàng xung quanh bạn</p><p>🛵 Giao hàng trong 30 phút</p><p>💳 Thanh toán linh hoạt (VNPAY, COD, Ví điện tử)</p><a href='bitenex://home' style='display: inline-block; background: #FF6B35; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 20px;'>Đặt món ngay</a></body></html>"
+        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><h1 style='color: #FF6B35;'>Chào {{ $('Set Variables').item.json.firstName }}! 👋</h1><p>Bạn đã gia nhập Bitenex — ứng dụng giao đồ ăn nhanh nhất tại {{ $('Set Variables').item.json.city }}!</p><p>🍜 Khám phá hàng trăm nhà hàng xung quanh bạn</p><p>🛵 Giao hàng trong 30 phút</p><p>💳 Thanh toán linh hoạt (VNPAY, COD, Ví điện tử)</p><a href='bitenexuser://home' style='display: inline-block; background: #FF6B35; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 20px;'>Đặt món ngay</a></body></html>"
       },
       "id": "send-welcome-email",
       "name": "Send Welcome Email",
@@ -91,15 +84,13 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $json.userId }}" },
-            { "name": "title", "value": "Chào mừng đến Bitenex! 🎉" },
-            { "name": "body", "value": "Khám phá hàng trăm món ăn ngon xung quanh bạn. Đặt ngay!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'welcome', deepLink: 'bitenex://home' }) }}" }
-          ]
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}" }]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.userId, title: 'Chào mừng đến Bitenex! 🎉', body: 'Khám phá hàng trăm món ăn ngon xung quanh bạn. Đặt ngay!', data: { type: 'welcome', deepLink: 'bitenexuser://home' } }) }}",
         "options": {}
       },
       "id": "send-welcome-push",
@@ -122,7 +113,7 @@
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/journeys/users/{{ $('Set Variables').item.json.userId }}/first-order-status",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }]
+          "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}" }]
         },
         "options": { "response": { "response": { "neverError": true } } }
       },
@@ -150,14 +141,13 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "event", "value": "first_order_converted" },
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "properties", "value": "={{ JSON.stringify({ tag: 'new_converted', stage: 'early_10min' }) }}" }
-          ]
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}" }]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ event: 'first_order_converted', userId: $('Set Variables').item.json.userId, properties: { tag: 'new_converted', stage: 'early_10min' } }) }}",
         "options": {}
       },
       "id": "track-converted-1",
@@ -170,15 +160,13 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "title", "value": "🍽️ Đặt đơn đầu tiên nào!" },
-            { "name": "body", "value": "Miễn phí ship đơn đầu tiên! Hàng trăm nhà hàng đang chờ bạn 🛵" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'first_order_nudge', deepLink: 'bitenex://home' }) }}" }
-          ]
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}" }]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.userId, title: '🍽️ Đặt đơn đầu tiên nào!', body: 'Miễn phí ship đơn đầu tiên! Hàng trăm nhà hàng đang chờ bạn 🛵', data: { type: 'first_order_nudge', deepLink: 'bitenexuser://home' } }) }}",
         "options": {}
       },
       "id": "send-nudge-push",
@@ -201,7 +189,7 @@
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/journeys/users/{{ $('Set Variables').item.json.userId }}/first-order-status",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }]
+          "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}" }]
         },
         "options": { "response": { "response": { "neverError": true } } }
       },
@@ -214,6 +202,7 @@
     {
       "parameters": {
         "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
           "conditions": [{ "id": "cond2", "leftValue": "={{ $json.hasFirstOrder }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
           "combinator": "and"
         }
@@ -228,15 +217,13 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/marketing/issue-voucher",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "voucherCode", "value": "WELCOME50K" },
-            { "name": "discountAmount", "value": "50000" },
-            { "name": "expiresInHours", "value": "24" }
-          ]
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}" }]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.userId, voucherCode: 'WELCOME50K', discountAmount: 50000, expiresInDays: 1 }) }}",
         "options": {}
       },
       "id": "issue-voucher",
@@ -249,15 +236,13 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "title", "value": "🎁 Quà tặng cho bạn!" },
-            { "name": "body", "value": "Tặng voucher 50.000đ cho đơn đầu tiên! Chỉ còn 24 giờ ⏰" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'voucher_issued', voucherCode: 'WELCOME50K', deepLink: 'bitenex://home' }) }}" }
-          ]
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}" }]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.userId, title: '🎁 Quà tặng cho bạn!', body: 'Tặng voucher 50.000đ cho đơn đầu tiên! Chỉ còn 24 giờ ⏰', data: { type: 'voucher_issued', voucherCode: $('Issue Voucher: WELCOME50K').item.json.voucherCode, deepLink: 'bitenexuser://home' } }) }}",
         "options": {}
       },
       "id": "send-voucher-push",
@@ -270,14 +255,13 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "event", "value": "user_unactivated_24h" },
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "properties", "value": "={{ JSON.stringify({ segment: 're-engage', tag: 'unactivated_24h' }) }}" }
-          ]
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}" }]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ event: 'user_unactivated_24h', userId: $('Set Variables').item.json.userId, properties: { segment: 're-engage', tag: 'unactivated_24h' } }) }}",
         "options": {}
       },
       "id": "tag-unactivated",
