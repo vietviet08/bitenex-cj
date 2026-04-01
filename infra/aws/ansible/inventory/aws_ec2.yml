@@ -1,0 +1,11 @@
+plugin: amazon.aws.aws_ec2
+regions:
+    - ap-southeast-1
+filters:
+    tag:Project: bitenex-cj
+    tag:Role: bitenex-api-host
+hostnames:
+    - public-ip-address
+keyed_groups:
+    - key: tags.Role
+      prefix: role

@@ -1,0 +1,11 @@
+ansible_user: ubuntu
+
+n8n_version: "latest"
+
+n8n_basic_auth_user: admin
+n8n_basic_auth_password: change-me
+n8n_webhook_url: "https://n8n.example.com"
+
+bitenex_repo_url: "https://github.com/your-org/bitenex.git"
+bitenex_repo_version: "main"
+bitenex_compose_dir: "/opt/bitenex/repo/bitenex-api"

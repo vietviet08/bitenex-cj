@@ -1,0 +1,162 @@
+---
+- name: Bootstrap Ubuntu server and deploy bitenex-api compose stack
+  hosts: role_bitenex_api_host
+  become: true
+  vars:
+      jenkins_apt_key_url: "https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key"
+      jenkins_apt_repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
+
+  tasks:
+      - name: Update apt cache
+        ansible.builtin.apt:
+            update_cache: true
+            cache_valid_time: 3600
+
+      - name: Install base dependencies
+        ansible.builtin.apt:
+            name:
+                - ca-certificates
+                - curl
+                - gnupg
+                - lsb-release
+                - apt-transport-https
+                - software-properties-common
+                - git
+                - net-tools
+                - openjdk-17-jdk
+            state: present
+
+      - name: Create Docker keyring directory
+        ansible.builtin.file:
+            path: /etc/apt/keyrings
+            state: directory
+            mode: "0755"
+
+      - name: Download Docker apt gpg key
+        ansible.builtin.get_url:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            dest: /etc/apt/keyrings/docker.asc
+            mode: "0644"
+
+      - name: Add Docker apt repository
+        ansible.builtin.apt_repository:
+            repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+            state: present
+            filename: docker
+
+      - name: Install Docker engine and compose plugin
+        ansible.builtin.apt:
+            name:
+                - docker-ce
+                - docker-ce-cli
+                - containerd.io
+                - docker-buildx-plugin
+                - docker-compose-plugin
+            state: present
+            update_cache: true
+
+      - name: Ensure Docker service is running
+        ansible.builtin.service:
+            name: docker
+            state: started
+            enabled: true
+
+      - name: Add ubuntu user to docker group
+        ansible.builtin.user:
+            name: ubuntu
+            groups: docker
+            append: true
+
+      - name: Add Jenkins apt key
+        ansible.builtin.get_url:
+            url: "{{ jenkins_apt_key_url }}"
+            dest: /usr/share/keyrings/jenkins-keyring.asc
+            mode: "0644"
+
+      - name: Add Jenkins apt repository
+        ansible.builtin.apt_repository:
+            repo: "{{ jenkins_apt_repo }}"
+            state: present
+            filename: jenkins
+
+      - name: Install Jenkins
+        ansible.builtin.apt:
+            name: jenkins
+            state: present
+            update_cache: true
+
+      - name: Ensure Jenkins service is running
+        ansible.builtin.service:
+            name: jenkins
+            state: started
+            enabled: true
+
+      - name: Add Jenkins user to docker group
+        ansible.builtin.user:
+            name: jenkins
+            groups: docker
+            append: true
+
+      - name: Create deployment base directory
+        ansible.builtin.file:
+            path: /opt/bitenex
+            state: directory
+            owner: ubuntu
+            group: ubuntu
+            mode: "0755"
+
+      - name: Checkout bitenex repository
+        ansible.builtin.git:
+            repo: "{{ bitenex_repo_url }}"
+            dest: /opt/bitenex/repo
+            version: "{{ bitenex_repo_version }}"
+            force: true
+        become_user: ubuntu
+
+      - name: Check required compose env files exist
+        ansible.builtin.stat:
+            path: "{{ item }}"
+        loop:
+            - "{{ bitenex_compose_dir }}/.env"
+            - "{{ bitenex_compose_dir }}/.env.docker"
+        register: env_files
+
+      - name: Warn when env files are missing
+        ansible.builtin.debug:
+            msg: "Missing {{ item.stat.path }}. Create env files before compose up."
+        loop: "{{ env_files.results }}"
+        when: not item.stat.exists
+
+      - name: Pull docker images for stack
+        ansible.builtin.command:
+            cmd: docker compose pull
+            chdir: "{{ bitenex_compose_dir }}"
+        when: env_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
+
+      - name: Ensure local db container is removed (using RDS instead)
+        ansible.builtin.command:
+            cmd: docker compose stop db
+            chdir: "{{ bitenex_compose_dir }}"
+        failed_when: false
+        changed_when: false
+        when: env_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
+
+      - name: Remove db service container if exists
+        ansible.builtin.command:
+            cmd: docker compose rm -f db
+            chdir: "{{ bitenex_compose_dir }}"
+        failed_when: false
+        changed_when: false
+        when: env_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
+
+      - name: Deploy non-db services
+        ansible.builtin.command:
+            cmd: docker compose --profile dev-tools up -d --build redis n8n sonarqube pgadmin
+            chdir: "{{ bitenex_compose_dir }}"
+        when: env_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
+
+      - name: Deploy docker compose stack
+        ansible.builtin.command:
+            cmd: docker compose up -d --build --no-deps api
+            chdir: "{{ bitenex_compose_dir }}"
+        when: env_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
