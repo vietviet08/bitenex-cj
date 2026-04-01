@@ -12,29 +12,83 @@
       "name": "Webhook: order.delivered",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 400]
+      "position": [
+        240,
+        400
+      ]
     },
     {
-      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify({ received: true, workflowId: 'WF-04' }) }}" },
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true, workflowId: 'WF-04' }) }}"
+      },
       "id": "resp-04",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [460, 240]
+      "position": [
+        460,
+        240
+      ]
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
-            { "id": "1", "name": "orderId", "value": "={{ $json.body.orderId }}", "type": "string" },
-            { "id": "2", "name": "userId", "value": "={{ $json.body.userId }}", "type": "string" },
-            { "id": "3", "name": "merchantId", "value": "={{ $json.body.merchantId }}", "type": "string" },
-            { "id": "4", "name": "merchantName", "value": "={{ $json.body.merchantName }}", "type": "string" },
-            { "id": "5", "name": "driverId", "value": "={{ $json.body.driverId }}", "type": "string" },
-            { "id": "6", "name": "total", "value": "={{ $json.body.total }}", "type": "number" },
-            { "id": "7", "name": "email", "value": "={{ $json.body.email }}", "type": "string" },
-            { "id": "8", "name": "deepLinkReview", "value": "bitenexuser://order/food-rating", "type": "string" },
-            { "id": "9", "name": "deepLinkReorder", "value": "bitenexuser://home", "type": "string" }
+            {
+              "id": "1",
+              "name": "orderId",
+              "value": "={{ $json.body.orderId }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "userId",
+              "value": "={{ $json.body.userId }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "merchantId",
+              "value": "={{ $json.body.merchantId }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "merchantName",
+              "value": "={{ $json.body.merchantName }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "driverId",
+              "value": "={{ $json.body.driverId }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "total",
+              "value": "={{ $json.body.total }}",
+              "type": "number"
+            },
+            {
+              "id": "7",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "8",
+              "name": "deepLinkReview",
+              "value": "bitenexuser://order/food-rating",
+              "type": "string"
+            },
+            {
+              "id": "9",
+              "name": "deepLinkReorder",
+              "value": "bitenexuser://home",
+              "type": "string"
+            }
           ]
         },
         "options": {}
@@ -43,29 +97,51 @@
       "name": "Set Variables",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [460, 400]
+      "position": [
+        460,
+        400
+      ]
     },
-    { "parameters": { "amount": 20, "unit": "minutes" }, "id": "wait-20min", "name": "Wait 20 minutes", "type": "n8n-nodes-base.wait", "typeVersion": 1.1, "position": [680, 400] },
+    {
+      "parameters": {
+        "amount": 20,
+        "unit": "minutes"
+      },
+      "id": "wait-20min",
+      "name": "Wait 20 minutes",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        400
+      ]
+    },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "title", "value": "⭐ Bạn cảm thấy thế nào?" },
-            { "name": "body", "value": "Đánh giá tài xế và {{ $('Set Variables').item.json.merchantName }} để tích điểm thưởng!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'review_request', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenexuser://order/food-rating' }) }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.userId, title: `⭐ Bạn cảm thấy thế nào?`, body: `Đánh giá tài xế và ${$('Set Variables').item.json.merchantName} để tích điểm thưởng!`, data: { type: 'review_request', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenexuser://order/food-rating' } }) }}"
       },
       "id": "send-review-push",
       "name": "Send: Review Request Push",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 340]
+      "position": [
+        900,
+        340
+      ]
     },
     {
       "parameters": {
@@ -79,28 +155,74 @@
       "name": "Send: Review Request Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [900, 460]
+      "position": [
+        900,
+        460
+      ]
     },
-    { "parameters": { "amount": 24, "unit": "hours" }, "id": "wait-24h", "name": "Wait 24 hours", "type": "n8n-nodes-base.wait", "typeVersion": 1.1, "position": [1120, 400] },
+    {
+      "parameters": {
+        "amount": 24,
+        "unit": "hours"
+      },
+      "id": "wait-24h",
+      "name": "Wait 24 hours",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        400
+      ]
+    },
     {
       "parameters": {
         "method": "GET",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/journeys/orders/{{ $('Set Variables').item.json.orderId }}/review-status",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
-        "options": { "response": { "response": { "neverError": true } } }
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "check-review-1",
       "name": "Check: Review Status (1)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1340, 400]
+      "position": [
+        1340,
+        400
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "rev1", "leftValue": "={{ $json.hasReview }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "rev1",
+              "leftValue": "={{ $json.hasReview }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
           "combinator": "and"
         }
       },
@@ -108,13 +230,30 @@
       "name": "IF: Has Review? (1)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1560, 400]
+      "position": [
+        1560,
+        400
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "rat1", "leftValue": "={{ $json.averageRating }}", "rightValue": 4, "operator": { "type": "number", "operation": "gte" } }],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "rat1",
+              "leftValue": "={{ $json.averageRating }}",
+              "rightValue": 4,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
           "combinator": "and"
         }
       },
@@ -122,49 +261,64 @@
       "name": "IF: Rating >= 4 Stars?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1780, 300]
+      "position": [
+        1780,
+        300
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/marketing/issue-voucher",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "voucherCode", "value": "REORDER30K" },
-            { "name": "discountAmount", "value": "30000" },
-            { "name": "expiresInDays", "value": "7" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.userId, voucherCode: `REORDER30K`, discountAmount: 30000, expiresInDays: 7 }) }}"
       },
       "id": "issue-reorder-voucher",
       "name": "Issue: Reorder Voucher 30K",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2000, 200]
+      "position": [
+        2000,
+        200
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "title", "value": "🎉 Cảm ơn bạn đã đánh giá!" },
-            { "name": "body", "value": "Tặng bạn voucher 30K cho lần đặt tiếp theo tại {{ $('Set Variables').item.json.merchantName }} 🍜" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'reorder_voucher', voucherCode: 'REORDER30K', deepLink: 'bitenexuser://home' }) }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.userId, title: `🎉 Cảm ơn bạn đã đánh giá!`, body: `Tặng bạn voucher 30K cho lần đặt tiếp theo tại ${$('Set Variables').item.json.merchantName} 🍜`, data: { type: 'reorder_voucher', voucherCode: 'REORDER30K', deepLink: 'bitenexuser://home' } }) }}"
       },
       "id": "send-reorder-push",
       "name": "Send: Reorder Voucher Push",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2220, 200]
+      "position": [
+        2220,
+        200
+      ]
     },
     {
       "parameters": {
@@ -179,49 +333,101 @@
       "name": "Slack: Negative Feedback Alert",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2000, 400]
+      "position": [
+        2000,
+        400
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "title", "value": "📝 Nhắc nhở: Đánh giá đơn hàng" },
-            { "name": "body", "value": "Chỉ 1 phút đánh giá để tích điểm thưởng từ {{ $('Set Variables').item.json.merchantName }}!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'review_reminder', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenexuser://order/food-rating' }) }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.userId, title: `📝 Nhắc nhở: Đánh giá đơn hàng`, body: `Chỉ 1 phút đánh giá để tích điểm thưởng từ ${$('Set Variables').item.json.merchantName}!`, data: { type: 'review_reminder', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenexuser://order/food-rating' } }) }}"
       },
       "id": "send-review-reminder",
       "name": "Send: Review Reminder Push",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1780, 500]
+      "position": [
+        1780,
+        500
+      ]
     },
-    { "parameters": { "amount": 3, "unit": "days" }, "id": "wait-3d", "name": "Wait 3 days", "type": "n8n-nodes-base.wait", "typeVersion": 1.1, "position": [2440, 300] },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "days"
+      },
+      "id": "wait-3d",
+      "name": "Wait 3 days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2440,
+        300
+      ]
+    },
     {
       "parameters": {
         "method": "GET",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/journeys/users/{{ $('Set Variables').item.json.userId }}/reorder-status",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
-        "options": { "response": { "response": { "neverError": true } } }
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "check-reorder",
       "name": "Check: Reorder Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2660, 300]
+      "position": [
+        2660,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "reord1", "leftValue": "={{ $json.hasReordered }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "reord1",
+              "leftValue": "={{ $json.hasReordered }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
           "combinator": "and"
         }
       },
@@ -229,84 +435,289 @@
       "name": "IF: Has Reordered?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2880, 300]
+      "position": [
+        2880,
+        300
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "event", "value": "reorder_success" },
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ event: `reorder_success`, userId: $('Set Variables').item.json.userId }) }}"
       },
       "id": "track-reorder-success",
       "name": "Track: reorder_success",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [3100, 220]
+      "position": [
+        3100,
+        220
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "title", "value": "🍜 Đặt lại lần nữa nhé?" },
-            { "name": "body", "value": "Còn nhớ {{ $('Set Variables').item.json.merchantName }}? Đặt lại ngay với voucher 30K còn hiệu lực!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'reorder_reminder', deepLink: 'bitenexuser://home' }) }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.userId, title: `🍜 Đặt lại lần nữa nhé?`, body: `Còn nhớ ${$('Set Variables').item.json.merchantName}? Đặt lại ngay với voucher 30K còn hiệu lực!`, data: { type: 'reorder_reminder', deepLink: 'bitenexuser://home' } }) }}"
       },
       "id": "send-reorder-reminder",
       "name": "Send: Reorder Reminder Push",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [3100, 380]
+      "position": [
+        3100,
+        380
+      ]
     }
   ],
   "connections": {
-    "Webhook: order.delivered": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }, { "node": "Set Variables", "type": "main", "index": 0 }]] },
-    "Set Variables": { "main": [[{ "node": "Wait 20 minutes", "type": "main", "index": 0 }]] },
-    "Wait 20 minutes": { "main": [[{ "node": "Send: Review Request Push", "type": "main", "index": 0 }, { "node": "Send: Review Request Email", "type": "main", "index": 0 }]] },
-    "Send: Review Request Push": { "main": [[{ "node": "Wait 24 hours", "type": "main", "index": 0 }]] },
-    "Send: Review Request Email": { "main": [[{ "node": "Wait 24 hours", "type": "main", "index": 0 }]] },
-    "Wait 24 hours": { "main": [[{ "node": "Check: Review Status (1)", "type": "main", "index": 0 }]] },
-    "Check: Review Status (1)": { "main": [[{ "node": "IF: Has Review? (1)", "type": "main", "index": 0 }]] },
+    "Webhook: order.delivered": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Variables": {
+      "main": [
+        [
+          {
+            "node": "Wait 20 minutes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 20 minutes": {
+      "main": [
+        [
+          {
+            "node": "Send: Review Request Push",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send: Review Request Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send: Review Request Push": {
+      "main": [
+        [
+          {
+            "node": "Wait 24 hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send: Review Request Email": {
+      "main": [
+        [
+          {
+            "node": "Wait 24 hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 24 hours": {
+      "main": [
+        [
+          {
+            "node": "Check: Review Status (1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Review Status (1)": {
+      "main": [
+        [
+          {
+            "node": "IF: Has Review? (1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "IF: Has Review? (1)": {
       "main": [
-        [{ "node": "IF: Rating >= 4 Stars?", "type": "main", "index": 0 }],
-        [{ "node": "Send: Review Reminder Push", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "IF: Rating >= 4 Stars?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send: Review Reminder Push",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "IF: Rating >= 4 Stars?": {
       "main": [
-        [{ "node": "Issue: Reorder Voucher 30K", "type": "main", "index": 0 }],
-        [{ "node": "Slack: Negative Feedback Alert", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Issue: Reorder Voucher 30K",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack: Negative Feedback Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Issue: Reorder Voucher 30K": { "main": [[{ "node": "Send: Reorder Voucher Push", "type": "main", "index": 0 }]] },
-    "Send: Reorder Voucher Push": { "main": [[{ "node": "Wait 3 days", "type": "main", "index": 0 }]] },
-    "Slack: Negative Feedback Alert": { "main": [[{ "node": "Wait 3 days", "type": "main", "index": 0 }]] },
-    "Send: Review Reminder Push": { "main": [[{ "node": "Wait 3 days", "type": "main", "index": 0 }]] },
-    "Wait 3 days": { "main": [[{ "node": "Check: Reorder Status", "type": "main", "index": 0 }]] },
-    "Check: Reorder Status": { "main": [[{ "node": "IF: Has Reordered?", "type": "main", "index": 0 }]] },
+    "Issue: Reorder Voucher 30K": {
+      "main": [
+        [
+          {
+            "node": "Send: Reorder Voucher Push",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send: Reorder Voucher Push": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Negative Feedback Alert": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send: Review Reminder Push": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 days": {
+      "main": [
+        [
+          {
+            "node": "Check: Reorder Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Reorder Status": {
+      "main": [
+        [
+          {
+            "node": "IF: Has Reordered?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "IF: Has Reordered?": {
       "main": [
-        [{ "node": "Track: reorder_success", "type": "main", "index": 0 }],
-        [{ "node": "Send: Reorder Reminder Push", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Track: reorder_success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send: Reorder Reminder Push",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
   "pinData": {},
-  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
-  "tags": [{ "id": "tag-bitenex", "name": "bitenex" }, { "id": "tag-review", "name": "review-reorder" }],
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "tags": [
+    {
+      "id": "tag-bitenex",
+      "name": "bitenex"
+    },
+    {
+      "id": "tag-review",
+      "name": "review-reorder"
+    }
+  ],
   "versionId": "wf04-v1"
 }

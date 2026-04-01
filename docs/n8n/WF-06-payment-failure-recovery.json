@@ -12,29 +12,83 @@
       "name": "Webhook: payment.failed",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 400]
+      "position": [
+        240,
+        400
+      ]
     },
     {
-      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify({ received: true, workflowId: 'WF-06' }) }}" },
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true, workflowId: 'WF-06' }) }}"
+      },
       "id": "resp-06",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [460, 240]
+      "position": [
+        460,
+        240
+      ]
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
-            { "id": "1", "name": "paymentId", "value": "={{ $json.body.paymentId }}", "type": "string" },
-            { "id": "2", "name": "orderId", "value": "={{ $json.body.orderId }}", "type": "string" },
-            { "id": "3", "name": "userId", "value": "={{ $json.body.userId }}", "type": "string" },
-            { "id": "4", "name": "amount", "value": "={{ $json.body.amount }}", "type": "number" },
-            { "id": "5", "name": "method", "value": "={{ $json.body.method }}", "type": "string" },
-            { "id": "6", "name": "errorCode", "value": "={{ $json.body.errorCode || 'OTHER' }}", "type": "string" },
-            { "id": "7", "name": "gateway", "value": "={{ $json.body.gateway }}", "type": "string" },
-            { "id": "8", "name": "email", "value": "={{ $json.body.email }}", "type": "string" },
-            { "id": "9", "name": "phone", "value": "={{ $json.body.phone }}", "type": "string" }
+            {
+              "id": "1",
+              "name": "paymentId",
+              "value": "={{ $json.body.paymentId }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "orderId",
+              "value": "={{ $json.body.orderId }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "userId",
+              "value": "={{ $json.body.userId }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "amount",
+              "value": "={{ $json.body.amount }}",
+              "type": "number"
+            },
+            {
+              "id": "5",
+              "name": "method",
+              "value": "={{ $json.body.method }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "errorCode",
+              "value": "={{ $json.body.errorCode || 'OTHER' }}",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "gateway",
+              "value": "={{ $json.body.gateway }}",
+              "type": "string"
+            },
+            {
+              "id": "8",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "9",
+              "name": "phone",
+              "value": "={{ $json.body.phone }}",
+              "type": "string"
+            }
           ]
         },
         "options": {}
@@ -43,27 +97,37 @@
       "name": "Set Variables",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [460, 400]
+      "position": [
+        460,
+        400
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "event", "value": "payment_failed" },
-            { "name": "userId", "value": "={{ $json.userId }}" },
-            { "name": "properties", "value": "={{ JSON.stringify({ paymentId: $json.paymentId, orderId: $json.orderId, errorCode: $json.errorCode, method: $json.method, gateway: $json.gateway }) }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ event: `payment_failed`, userId: $json.userId, properties: { paymentId: $json.paymentId, orderId: $json.orderId, errorCode: $json.errorCode, method: $json.method, gateway: $json.gateway } }) }}"
       },
       "id": "track-payment-failed",
       "name": "Track: payment_failed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 400]
+      "position": [
+        680,
+        400
+      ]
     },
     {
       "parameters": {
@@ -73,28 +137,37 @@
       "name": "Code: Error Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 400]
+      "position": [
+        900,
+        400
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "userId", "value": "={{ $json.userId }}" },
-            { "name": "title", "value": "={{ $json.notification.title }}" },
-            { "name": "body", "value": "={{ $json.notification.body }}" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'payment_failed', orderId: $json.orderId, deepLink: 'bitenexuser://payment/' + $json.orderId }) }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $json.userId, title: $json.notification.title, body: $json.notification.body, data: { type: 'payment_failed', orderId: $json.orderId, deepLink: 'bitenexuser://payment/' + $json.orderId } }) }}"
       },
       "id": "send-failure-push",
       "name": "Send: Payment Failure Push",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 320]
+      "position": [
+        1120,
+        320
+      ]
     },
     {
       "parameters": {
@@ -108,27 +181,68 @@
       "name": "Send: Payment Failure Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [1120, 480]
+      "position": [
+        1120,
+        480
+      ]
     },
-    { "parameters": { "amount": 1, "unit": "hours" }, "id": "wait-1h", "name": "Wait 1 hour", "type": "n8n-nodes-base.wait", "typeVersion": 1.1, "position": [1340, 400] },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "hours"
+      },
+      "id": "wait-1h",
+      "name": "Wait 1 hour",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        400
+      ]
+    },
     {
       "parameters": {
         "method": "GET",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/payments/{{ $('Set Variables').item.json.paymentId }}/status",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
-        "options": { "response": { "response": { "neverError": true } } }
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "check-payment-status",
       "name": "Check: Payment Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1560, 400]
+      "position": [
+        1560,
+        400
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "conditions": [{ "leftValue": "={{ $json.status }}", "rightValue": "COMPLETED", "operator": { "type": "string", "operation": "equals" } }],
+          "conditions": [
+            {
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "COMPLETED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
           "combinator": "and"
         }
       },
@@ -136,31 +250,51 @@
       "name": "IF: Payment Recovered?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1780, 400]
+      "position": [
+        1780,
+        400
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "event", "value": "payment_recovered" },
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ event: `payment_recovered`, userId: $('Set Variables').item.json.userId }) }}"
       },
       "id": "track-recovered",
       "name": "Track: payment_recovered",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2000, 280]
+      "position": [
+        2000,
+        280
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "conditions": [{ "leftValue": "={{ $('Set Variables').item.json.method }}", "rightValue": "CASH_ON_DELIVERY", "operator": { "type": "string", "operation": "notEquals" } }],
+          "conditions": [
+            {
+              "leftValue": "={{ $('Set Variables').item.json.method }}",
+              "rightValue": "CASH_ON_DELIVERY",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
           "combinator": "and"
         }
       },
@@ -168,28 +302,37 @@
       "name": "IF: COD Available?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2000, 500]
+      "position": [
+        2000,
+        500
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.userId }}" },
-            { "name": "title", "value": "💵 Thanh toán tiền mặt?" },
-            { "name": "body", "value": "Bạn có thể đổi sang thanh toán tiền mặt khi nhận hàng (COD). Đặt ngay!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'cod_offer', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenexuser://payment/' + $('Set Variables').item.json.orderId }) }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.userId, title: `💵 Thanh toán tiền mặt?`, body: `Bạn có thể đổi sang thanh toán tiền mặt khi nhận hàng (COD). Đặt ngay!`, data: { type: 'cod_offer', orderId: $('Set Variables').item.json.orderId, deepLink: 'bitenexuser://payment/' + $('Set Variables').item.json.orderId } }) }}"
       },
       "id": "offer-cod",
       "name": "Offer: COD Alternative Push",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2220, 420]
+      "position": [
+        2220,
+        420
+      ]
     },
     {
       "parameters": {
@@ -202,52 +345,200 @@
       "name": "SMS: Final Attempt",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [2220, 580]
+      "position": [
+        2220,
+        580
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/orders/{{ $('Set Variables').item.json.orderId }}/cancel",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [{ "name": "reason", "value": "Payment failed after multiple recovery attempts" }]
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
+          ]
         },
-        "options": {}
+        "sendBody": true,
+        "options": {},
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ reason: `Payment failed after multiple recovery attempts` }) }}"
       },
       "id": "cancel-order",
       "name": "Cancel: Order (Final)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2440, 580]
+      "position": [
+        2440,
+        580
+      ]
     }
   ],
   "connections": {
-    "Webhook: payment.failed": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }, { "node": "Set Variables", "type": "main", "index": 0 }]] },
-    "Set Variables": { "main": [[{ "node": "Track: payment_failed", "type": "main", "index": 0 }]] },
-    "Track: payment_failed": { "main": [[{ "node": "Code: Error Message", "type": "main", "index": 0 }]] },
-    "Code: Error Message": { "main": [[{ "node": "Send: Payment Failure Push", "type": "main", "index": 0 }, { "node": "Send: Payment Failure Email", "type": "main", "index": 0 }]] },
-    "Send: Payment Failure Push": { "main": [[{ "node": "Wait 1 hour", "type": "main", "index": 0 }]] },
-    "Send: Payment Failure Email": { "main": [[{ "node": "Wait 1 hour", "type": "main", "index": 0 }]] },
-    "Wait 1 hour": { "main": [[{ "node": "Check: Payment Status", "type": "main", "index": 0 }]] },
-    "Check: Payment Status": { "main": [[{ "node": "IF: Payment Recovered?", "type": "main", "index": 0 }]] },
+    "Webhook: payment.failed": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Variables": {
+      "main": [
+        [
+          {
+            "node": "Track: payment_failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track: payment_failed": {
+      "main": [
+        [
+          {
+            "node": "Code: Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Error Message": {
+      "main": [
+        [
+          {
+            "node": "Send: Payment Failure Push",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send: Payment Failure Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send: Payment Failure Push": {
+      "main": [
+        [
+          {
+            "node": "Wait 1 hour",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send: Payment Failure Email": {
+      "main": [
+        [
+          {
+            "node": "Wait 1 hour",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1 hour": {
+      "main": [
+        [
+          {
+            "node": "Check: Payment Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Payment Status": {
+      "main": [
+        [
+          {
+            "node": "IF: Payment Recovered?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "IF: Payment Recovered?": {
       "main": [
-        [{ "node": "Track: payment_recovered", "type": "main", "index": 0 }],
-        [{ "node": "IF: COD Available?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Track: payment_recovered",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF: COD Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "IF: COD Available?": {
       "main": [
-        [{ "node": "Offer: COD Alternative Push", "type": "main", "index": 0 }],
-        [{ "node": "SMS: Final Attempt", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Offer: COD Alternative Push",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SMS: Final Attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "SMS: Final Attempt": { "main": [[{ "node": "Cancel: Order (Final)", "type": "main", "index": 0 }]] }
+    "SMS: Final Attempt": {
+      "main": [
+        [
+          {
+            "node": "Cancel: Order (Final)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "pinData": {},
-  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
-  "tags": [{ "id": "tag-bitenex", "name": "bitenex" }, { "id": "tag-payment", "name": "payment-recovery" }],
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "tags": [
+    {
+      "id": "tag-bitenex",
+      "name": "bitenex"
+    },
+    {
+      "id": "tag-payment",
+      "name": "payment-recovery"
+    }
+  ],
   "versionId": "wf06-v1"
 }

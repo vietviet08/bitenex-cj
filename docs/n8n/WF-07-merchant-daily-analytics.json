@@ -3,45 +3,83 @@
   "nodes": [
     {
       "parameters": {
-        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 8 * * *" }] }
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
       },
       "id": "cron-daily",
       "name": "Cron: 08:00 Daily",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 400]
+      "position": [
+        240,
+        400
+      ]
     },
     {
       "parameters": {
         "method": "GET",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/merchants/active-list",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "get-merchants",
       "name": "GET: Active Merchants",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 400]
+      "position": [
+        460,
+        400
+      ]
     },
     {
-      "parameters": { "batchSize": 10, "options": {} },
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
       "id": "batch-merchants",
       "name": "Split In Batches (10)",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [680, 400]
+      "position": [
+        680,
+        400
+      ]
     },
     {
       "parameters": {
         "method": "GET",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/merchants/{{ $json.merchantId }}/daily-stats",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }] },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
+          ]
+        },
         "sendQuery": true,
         "queryParameters": {
-          "parameters": [{ "name": "date", "value": "={{ $now.minus({ days: 1 }).toFormat('yyyy-MM-dd') }}" }]
+          "parameters": [
+            {
+              "name": "date",
+              "value": "={{ $now.minus({ days: 1 }).toFormat('yyyy-MM-dd') }}"
+            }
+          ]
         },
         "options": {}
       },
@@ -49,7 +87,10 @@
       "name": "GET: Merchant Daily Stats",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 400]
+      "position": [
+        900,
+        400
+      ]
     },
     {
       "parameters": {
@@ -59,7 +100,10 @@
       "name": "Code: Format Report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 400]
+      "position": [
+        1120,
+        400
+      ]
     },
     {
       "parameters": {
@@ -73,12 +117,24 @@
       "name": "Send: Analytics Report Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [1340, 340]
+      "position": [
+        1340,
+        340
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "conditions": [{ "leftValue": "={{ $json.averageRating }}", "rightValue": 3.5, "operator": { "type": "number", "operation": "lt" } }],
+          "conditions": [
+            {
+              "leftValue": "={{ $json.averageRating }}",
+              "rightValue": 3.5,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
           "combinator": "and"
         }
       },
@@ -86,7 +142,10 @@
       "name": "IF: Low Rating < 3.5?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1340, 480]
+      "position": [
+        1340,
+        480
+      ]
     },
     {
       "parameters": {
@@ -101,45 +160,155 @@
       "name": "Slack: Low Rating Alert",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1560, 480]
+      "position": [
+        1560,
+        480
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
         "sendBody": true,
-        "bodyParameters": {
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
-            { "name": "event", "value": "daily_digest_sent" },
-            { "name": "properties", "value": "={{ JSON.stringify({ merchantId: $json.merchantId, date: $now.minus({ days: 1 }).toFormat('yyyy-MM-dd'), revenue: $json.revenue, totalOrders: $json.totalOrders }) }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.BITENEX_INTERNAL_API_KEY }}"
+            }
           ]
         },
-        "options": {}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ event: `daily_digest_sent`, properties: { merchantId: $json.merchantId, date: $now.minus({ days: 1 }).toFormat('yyyy-MM-dd'), revenue: $json.revenue, totalOrders: $json.totalOrders } }) }}"
       },
       "id": "track-digest-sent",
       "name": "Track: daily_digest_sent",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1780, 400]
+      "position": [
+        1780,
+        400
+      ]
     }
   ],
   "connections": {
-    "Cron: 08:00 Daily": { "main": [[{ "node": "GET: Active Merchants", "type": "main", "index": 0 }]] },
-    "GET: Active Merchants": { "main": [[{ "node": "Split In Batches (10)", "type": "main", "index": 0 }]] },
-    "Split In Batches (10)": { "main": [[{ "node": "GET: Merchant Daily Stats", "type": "main", "index": 0 }]] },
-    "GET: Merchant Daily Stats": { "main": [[{ "node": "Code: Format Report", "type": "main", "index": 0 }]] },
-    "Code: Format Report": { "main": [[{ "node": "Send: Analytics Report Email", "type": "main", "index": 0 }, { "node": "IF: Low Rating < 3.5?", "type": "main", "index": 0 }]] },
-    "Send: Analytics Report Email": { "main": [[{ "node": "Track: daily_digest_sent", "type": "main", "index": 0 }]] },
-    "IF: Low Rating < 3.5?": {
+    "Cron: 08:00 Daily": {
       "main": [
-        [{ "node": "Slack: Low Rating Alert", "type": "main", "index": 0 }],
-        [{ "node": "Track: daily_digest_sent", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "GET: Active Merchants",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Slack: Low Rating Alert": { "main": [[{ "node": "Track: daily_digest_sent", "type": "main", "index": 0 }]] }
+    "GET: Active Merchants": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches (10)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches (10)": {
+      "main": [
+        [
+          {
+            "node": "GET: Merchant Daily Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET: Merchant Daily Stats": {
+      "main": [
+        [
+          {
+            "node": "Code: Format Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Format Report": {
+      "main": [
+        [
+          {
+            "node": "Send: Analytics Report Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF: Low Rating < 3.5?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send: Analytics Report Email": {
+      "main": [
+        [
+          {
+            "node": "Track: daily_digest_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Low Rating < 3.5?": {
+      "main": [
+        [
+          {
+            "node": "Slack: Low Rating Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Track: daily_digest_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Low Rating Alert": {
+      "main": [
+        [
+          {
+            "node": "Track: daily_digest_sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "pinData": {},
-  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
-  "tags": [{ "id": "tag-bitenex", "name": "bitenex" }, { "id": "tag-analytics", "name": "merchant-analytics" }],
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "tags": [
+    {
+      "id": "tag-bitenex",
+      "name": "bitenex"
+    },
+    {
+      "id": "tag-analytics",
+      "name": "merchant-analytics"
+    }
+  ],
   "versionId": "wf07-v1"
 }
