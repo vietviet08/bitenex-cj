@@ -1,359 +1,738 @@
 {
-  "name": "WF-02: Abandoned Checkout Recovery",
-  "nodes": [
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "bitenex/checkout-abandoned",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "wh-checkout-abandoned",
-      "name": "Webhook: checkout.abandoned",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [240, 300]
-    },
-    {
-      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify({ received: true, workflowId: 'WF-02' }) }}" },
-      "id": "resp-02",
-      "name": "Respond to Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [460, 200]
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            { "id": "1", "name": "customerId", "value": "={{ $json.body.customerId }}", "type": "string" },
-            { "id": "2", "name": "checkoutSessionId", "value": "={{ $json.body.checkoutSessionId }}", "type": "string" },
-            { "id": "3", "name": "merchantName", "value": "={{ $json.body.merchantName }}", "type": "string" },
-            { "id": "4", "name": "cartValue", "value": "={{ $json.body.cartValue }}", "type": "number" },
-            { "id": "5", "name": "currency", "value": "={{ $json.body.currency || 'VND' }}", "type": "string" },
-            { "id": "6", "name": "deepLink", "value": "={{ $json.body.deepLink || 'bitenexuser://checkout' }}", "type": "string" },
-            { "id": "7", "name": "email", "value": "={{ $json.body.email }}", "type": "string" },
-            { "id": "8", "name": "phone", "value": "={{ $json.body.phone }}", "type": "string" }
-          ]
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "bitenex/checkout-abandoned",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "c18460d4-9241-43b5-9b3b-e8626c8cf97e",
+            "name": "Webhook: checkout.abandoned",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                -336,
+                224
+            ],
+            "webhookId": "7349736b-d234-4cc4-8082-fc614e853bdb"
         },
-        "options": {}
-      },
-      "id": "set-vars-02",
-      "name": "Set Variables",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [460, 300]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "event", "value": "checkout_abandoned" },
-            { "name": "userId", "value": "={{ $json.customerId }}" },
-            { "name": "properties", "value": "={{ JSON.stringify({ checkoutSessionId: $json.checkoutSessionId, cartValue: $json.cartValue, merchantName: $json.merchantName }) }}" }
-          ]
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ received: true, workflowId: 'WF-02' }) }}",
+                "options": {}
+            },
+            "id": "d0d8c23b-0894-4c82-b9ba-db81d0bb97dd",
+            "name": "Respond to Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                -112,
+                48
+            ]
         },
-        "options": {}
-      },
-      "id": "track-abandoned",
-      "name": "Track: checkout_abandoned",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [680, 300]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "conditions": [{ "id": "high-value", "leftValue": "={{ $('Set Variables').item.json.cartValue }}", "rightValue": 100000, "operator": { "type": "number", "operation": "gte" } }],
-          "combinator": "and"
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "1",
+                            "name": "customerId",
+                            "value": "={{ $json.body.customerId }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "2",
+                            "name": "checkoutSessionId",
+                            "value": "={{ $json.body.checkoutSessionId }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "3",
+                            "name": "merchantName",
+                            "value": "={{ $json.body.merchantName }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "4",
+                            "name": "cartValue",
+                            "value": "={{ $json.body.cartValue }}",
+                            "type": "number"
+                        },
+                        {
+                            "id": "5",
+                            "name": "currency",
+                            "value": "={{ $json.body.currency || 'VND' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "6",
+                            "name": "deepLink",
+                            "value": "={{ $json.body.deepLink || 'bitenex://checkout' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "7",
+                            "name": "email",
+                            "value": "={{ $json.body.email }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "8",
+                            "name": "phone",
+                            "value": "={{ $json.body.phone }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "d1ff7bed-0989-4519-99bb-4fb9d68dd14b",
+            "name": "Set Variables",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -112,
+                224
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+                "sendBody": true,
+                "options": {},
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}"
+                        }
+                    ]
+                },
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ event: 'checkout_abandoned', userId: $json.customerId, properties: { checkoutSessionId: $json.checkoutSessionId, cartValue: $json.cartValue, merchantName: $json.merchantName } }) }}"
+            },
+            "id": "a5afc755-104c-4c26-8da5-afc7726e7a93",
+            "name": "Track: checkout_abandoned",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                112,
+                224
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "high-value",
+                            "leftValue": "={{ $('Set Variables').item.json.cartValue }}",
+                            "rightValue": 100000,
+                            "operator": {
+                                "type": "number",
+                                "operation": "gte"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "404cdc5a-6a8b-476b-9a10-d8613850f448",
+            "name": "IF: High Value Cart >= 100K?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                336,
+                224
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+                "sendBody": true,
+                "options": {},
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}"
+                        }
+                    ]
+                },
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.customerId, title: '🛒 Giỏ hàng cao cấp đang chờ bạn!', body: 'Bạn đang có ' + ($('Set Variables').item.json.cartValue / 1000) + 'K trong giỏ từ ' + $('Set Variables').item.json.merchantName + '. Đặt ngay kẻo hết!', data: { type: 'cart_reminder_high', deepLink: $('Set Variables').item.json.deepLink } }) }}"
+            },
+            "id": "5ed76069-fed1-49c7-a492-1cf5f2f25ae6",
+            "name": "Send: High-Value Recover Push",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                560,
+                144
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+                "sendBody": true,
+                "options": {},
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}"
+                        }
+                    ]
+                },
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.customerId, title: '🛒 Bạn quên gì rồi!', body: 'Giỏ hàng từ ' + $('Set Variables').item.json.merchantName + ' đang chờ. Đặt ngay!', data: { type: 'cart_reminder', deepLink: $('Set Variables').item.json.deepLink } }) }}"
+            },
+            "id": "f5a33569-3341-413c-95d2-0e23cb652c30",
+            "name": "Send: Normal Recover Push",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                560,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "amount": 30,
+                "unit": "minutes"
+            },
+            "id": "80901ff9-b655-4d5e-be6b-83d11e33b090",
+            "name": "Wait 30 minutes",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                768,
+                224
+            ],
+            "webhookId": "3f6e3cbc-3ee4-45d8-a8a9-e4c1fd9b7cdf"
+        },
+        {
+            "parameters": {
+                "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/journeys/checkouts/{{ $('Set Variables').item.json.checkoutSessionId }}/status",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "response": {
+                        "response": {
+                            "neverError": true
+                        }
+                    }
+                }
+            },
+            "id": "132bde89-9bca-4a9c-8160-23a3d7768e4d",
+            "name": "Check: Checkout Converted? (1)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                992,
+                224
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "converted-1",
+                            "leftValue": "={{ $json.converted }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equal"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "9cc121b1-ba1f-42d3-b0eb-627ff64b4e3c",
+            "name": "IF: Converted? (1)",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                1216,
+                224
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+                "sendBody": true,
+                "options": {},
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}"
+                        }
+                    ]
+                },
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ event: 'checkout_recovered', userId: $('Set Variables').item.json.customerId }) }}"
+            },
+            "id": "5eee95f1-d5c1-4e18-ab5a-85024cb92791",
+            "name": "Track: checkout_recovered (early)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1440,
+                112
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+                "sendBody": true,
+                "options": {},
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}"
+                        }
+                    ]
+                },
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.customerId, title: '⏰ Nhắc nhở cuối cùng!', body: 'Giỏ hàng ' + $('Set Variables').item.json.merchantName + ' sắp hết hạn! Đặt ngay nhé 🍜', data: { type: 'cart_final_reminder', deepLink: $('Set Variables').item.json.deepLink } }) }}"
+            },
+            "id": "9f6fc67b-69e7-41bd-8639-9eb670a11280",
+            "name": "Send: Final Reminder Push",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1440,
+                304
+            ]
+        },
+        {
+            "parameters": {
+                "fromEmail": "noreply@bitenex.vn",
+                "toEmail": "={{ $('Set Variables').item.json.email }}",
+                "subject": "=🛒 Giỏ hàng của bạn tại {{ $('Set Variables').item.json.merchantName }}",
+                "options": {}
+            },
+            "id": "0ffc2ae4-8f76-4060-956f-26af2bdddd95",
+            "name": "Send: Recovery Email",
+            "type": "n8n-nodes-base.emailSend",
+            "typeVersion": 2.1,
+            "position": [
+                1440,
+                576
+            ],
+            "webhookId": "c89200a1-dbf5-4cec-a536-da3652d2668e",
+            "credentials": {
+                "smtp": {
+                    "id": "fZ4R4mnYQUWHKTSb",
+                    "name": "SMTP account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "amount": 2,
+                "unit": "hours"
+            },
+            "id": "2a34b790-1858-4f98-aa2d-cae4e756f7d8",
+            "name": "Wait 2 hours",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                1648,
+                336
+            ],
+            "webhookId": "e88b8d1c-2c67-49f1-bd30-5e1d5e7ba64a"
+        },
+        {
+            "parameters": {
+                "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/journeys/checkouts/{{ $('Set Variables').item.json.checkoutSessionId }}/status",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "response": {
+                        "response": {
+                            "neverError": true
+                        }
+                    }
+                }
+            },
+            "id": "f1038d47-5714-4bd1-9bd8-3384d6fd1ba9",
+            "name": "Check: Checkout Converted? (2)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1872,
+                336
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "converted-2",
+                            "leftValue": "={{ $json.converted }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equal"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "e712d93e-29ea-4777-8bb4-c787c102334b",
+            "name": "IF: Converted? (2)",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                2096,
+                336
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/marketing/issue-voucher",
+                "sendBody": true,
+                "options": {},
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}"
+                        }
+                    ]
+                },
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.customerId, voucherCode: 'BRINGBACK30K', discountAmount: 30000, expiresInHours: 24 }) }}"
+            },
+            "id": "3ac62d27-54f9-4254-a0b0-c745973ecd54",
+            "name": "Issue: Recovery Voucher 30K",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2320,
+                416
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
+                "sendBody": true,
+                "options": {},
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}"
+                        }
+                    ]
+                },
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ userId: $('Set Variables').item.json.customerId, title: '🎁 Ưu đãi đặc biệt chỉ cho bạn!', body: 'Giảm ngay 30.000đ cho đơn từ ' + $('Set Variables').item.json.merchantName + '. Chỉ còn 24h! ⏰', data: { type: 'recovery_voucher', voucherCode: 'BRINGBACK30K', deepLink: $('Set Variables').item.json.deepLink } }) }}"
+            },
+            "id": "53783236-d7f5-4f4e-a438-34bc7bb9d4a7",
+            "name": "Send: Recovery Offer Push",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2528,
+                416
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
+                "sendBody": true,
+                "options": {},
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env.BITENEX_INTERNAL_API_KEY }}"
+                        }
+                    ]
+                },
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ event: 'cart_abandoned_lost', userId: $('Set Variables').item.json.customerId, properties: { segment: 're-engage', cartValue: $('Set Variables').item.json.cartValue } }) }}"
+            },
+            "id": "85380793-358e-4546-ba20-f81e1ae31316",
+            "name": "Tag: cart_abandoned_lost",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2736,
+                416
+            ]
         }
-      },
-      "id": "if-high-value",
-      "name": "IF: High Value Cart >= 100K?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [900, 300]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.customerId }}" },
-            { "name": "title", "value": "🛒 Giỏ hàng cao cấp đang chờ bạn!" },
-            { "name": "body", "value": "Bạn đang có {{ $('Set Variables').item.json.cartValue / 1000 }}K trong giỏ từ {{ $('Set Variables').item.json.merchantName }}. Đặt ngay kẻo hết!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'cart_reminder_high', deepLink: $('Set Variables').item.json.deepLink }) }}" }
-          ]
+    ],
+    "connections": {
+        "Webhook: checkout.abandoned": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Set Variables",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         },
-        "options": {}
-      },
-      "id": "push-high-value",
-      "name": "Send: High-Value Recover Push",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1120, 220]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.customerId }}" },
-            { "name": "title", "value": "🛒 Bạn quên gì rồi!" },
-            { "name": "body", "value": "Giỏ hàng từ {{ $('Set Variables').item.json.merchantName }} đang chờ. Đặt ngay!" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'cart_reminder', deepLink: $('Set Variables').item.json.deepLink }) }}" }
-          ]
+        "Set Variables": {
+            "main": [
+                [
+                    {
+                        "node": "Track: checkout_abandoned",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         },
-        "options": {}
-      },
-      "id": "push-normal",
-      "name": "Send: Normal Recover Push",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1120, 380]
-    },
-    {
-      "parameters": { "amount": 30, "unit": "minutes" },
-      "id": "wait-30min",
-      "name": "Wait 30 minutes",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [1340, 300]
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/journeys/checkouts/{{ $('Set Variables').item.json.checkoutSessionId }}/status",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }]
+        "Track: checkout_abandoned": {
+            "main": [
+                [
+                    {
+                        "node": "IF: High Value Cart >= 100K?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         },
-        "options": { "response": { "response": { "neverError": true } } }
-      },
-      "id": "check-checkout-1",
-      "name": "Check: Checkout Converted? (1)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1560, 300]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "conditions": [{ "id": "converted-1", "leftValue": "={{ $json.converted }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
-          "combinator": "and"
+        "IF: High Value Cart >= 100K?": {
+            "main": [
+                [
+                    {
+                        "node": "Send: High-Value Recover Push",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Send: Normal Recover Push",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send: High-Value Recover Push": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 30 minutes",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send: Normal Recover Push": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 30 minutes",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait 30 minutes": {
+            "main": [
+                [
+                    {
+                        "node": "Check: Checkout Converted? (1)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check: Checkout Converted? (1)": {
+            "main": [
+                [
+                    {
+                        "node": "IF: Converted? (1)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF: Converted? (1)": {
+            "main": [
+                [
+                    {
+                        "node": "Track: checkout_recovered (early)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Send: Final Reminder Push",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Send: Recovery Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send: Final Reminder Push": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 2 hours",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send: Recovery Email": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 2 hours",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait 2 hours": {
+            "main": [
+                [
+                    {
+                        "node": "Check: Checkout Converted? (2)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check: Checkout Converted? (2)": {
+            "main": [
+                [
+                    {
+                        "node": "IF: Converted? (2)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF: Converted? (2)": {
+            "main": [
+                [
+                    {
+                        "node": "Track: checkout_recovered (early)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Issue: Recovery Voucher 30K",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Issue: Recovery Voucher 30K": {
+            "main": [
+                [
+                    {
+                        "node": "Send: Recovery Offer Push",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send: Recovery Offer Push": {
+            "main": [
+                [
+                    {
+                        "node": "Tag: cart_abandoned_lost",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         }
-      },
-      "id": "if-converted-1",
-      "name": "IF: Converted? (1)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [1780, 300]
     },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "event", "value": "checkout_recovered" },
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.customerId }}" }
-          ]
-        },
-        "options": {}
-      },
-      "id": "track-recovered-early",
-      "name": "Track: checkout_recovered (early)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [2000, 200]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.customerId }}" },
-            { "name": "title", "value": "⏰ Nhắc nhở cuối cùng!" },
-            { "name": "body", "value": "Giỏ hàng {{ $('Set Variables').item.json.merchantName }} sắp hết hạn! Đặt ngay nhé 🍜" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'cart_final_reminder', deepLink: $('Set Variables').item.json.deepLink }) }}" }
-          ]
-        },
-        "options": {}
-      },
-      "id": "send-final-push",
-      "name": "Send: Final Reminder Push",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [2000, 380]
-    },
-    {
-      "parameters": {
-        "fromEmail": "noreply@bitenex.vn",
-        "toEmail": "={{ $('Set Variables').item.json.email }}",
-        "subject": "🛒 Giỏ hàng của bạn tại {{ $('Set Variables').item.json.merchantName }}",
-        "emailType": "html",
-        "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><h2 style='color: #FF6B35;'>Bạn quên gì rồi! 🍜</h2><p>Giỏ hàng từ <strong>{{ $('Set Variables').item.json.merchantName }}</strong> đang chờ bạn với tổng giá trị <strong>{{ $('Set Variables').item.json.cartValue.toLocaleString() }}đ</strong>.</p><p>Đừng để đói! Đặt ngay trước khi giỏ hàng hết hạn.</p><a href='{{ $('Set Variables').item.json.deepLink }}' style='display: inline-block; background: #FF6B35; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;'>Hoàn tất đặt hàng →</a></body></html>"
-      },
-      "id": "send-recovery-email",
-      "name": "Send: Recovery Email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [2000, 460]
-    },
-    {
-      "parameters": { "amount": 2, "unit": "hours" },
-      "id": "wait-2h",
-      "name": "Wait 2 hours",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [2220, 420]
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/journeys/checkouts/{{ $('Set Variables').item.json.checkoutSessionId }}/status",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [{ "name": "X-Internal-Key", "value": "={{ $env.BITENEX_INTERNAL_API_KEY }}" }]
-        },
-        "options": { "response": { "response": { "neverError": true } } }
-      },
-      "id": "check-checkout-2",
-      "name": "Check: Checkout Converted? (2)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [2440, 420]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "conditions": [{ "id": "converted-2", "leftValue": "={{ $json.converted }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equal" } }],
-          "combinator": "and"
-        }
-      },
-      "id": "if-converted-2",
-      "name": "IF: Converted? (2)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [2660, 420]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/marketing/issue-voucher",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.customerId }}" },
-            { "name": "voucherCode", "value": "BRINGBACK30K" },
-            { "name": "discountAmount", "value": "30000" },
-            { "name": "expiresInHours", "value": "24" }
-          ]
-        },
-        "options": {}
-      },
-      "id": "issue-recovery-voucher",
-      "name": "Issue: Recovery Voucher 30K",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [2880, 500]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/notifications/push",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.customerId }}" },
-            { "name": "title", "value": "🎁 Ưu đãi đặc biệt chỉ cho bạn!" },
-            { "name": "body", "value": "Giảm ngay 30.000đ cho đơn từ {{ $('Set Variables').item.json.merchantName }}. Chỉ còn 24h! ⏰" },
-            { "name": "data", "value": "={{ JSON.stringify({ type: 'recovery_voucher', voucherCode: 'BRINGBACK30K', deepLink: $('Set Variables').item.json.deepLink }) }}" }
-          ]
-        },
-        "options": {}
-      },
-      "id": "send-recovery-offer",
-      "name": "Send: Recovery Offer Push",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [3100, 500]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BITENEX_API_BASE_URL }}/internal/events/track",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "event", "value": "cart_abandoned_lost" },
-            { "name": "userId", "value": "={{ $('Set Variables').item.json.customerId }}" },
-            { "name": "properties", "value": "={{ JSON.stringify({ segment: 're-engage', cartValue: $('Set Variables').item.json.cartValue }) }}" }
-          ]
-        },
-        "options": {}
-      },
-      "id": "tag-lost",
-      "name": "Tag: cart_abandoned_lost",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [3300, 500]
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "8e5b81ac53a0f712b6daec9592026d0bf01bec030f67ba217e6501fafcf706c3"
     }
-  ],
-  "connections": {
-    "Webhook: checkout.abandoned": {
-      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }, { "node": "Set Variables", "type": "main", "index": 0 }]]
-    },
-    "Set Variables": {
-      "main": [[{ "node": "Track: checkout_abandoned", "type": "main", "index": 0 }]]
-    },
-    "Track: checkout_abandoned": {
-      "main": [[{ "node": "IF: High Value Cart >= 100K?", "type": "main", "index": 0 }]]
-    },
-    "IF: High Value Cart >= 100K?": {
-      "main": [
-        [{ "node": "Send: High-Value Recover Push", "type": "main", "index": 0 }],
-        [{ "node": "Send: Normal Recover Push", "type": "main", "index": 0 }]
-      ]
-    },
-    "Send: High-Value Recover Push": { "main": [[{ "node": "Wait 30 minutes", "type": "main", "index": 0 }]] },
-    "Send: Normal Recover Push": { "main": [[{ "node": "Wait 30 minutes", "type": "main", "index": 0 }]] },
-    "Wait 30 minutes": { "main": [[{ "node": "Check: Checkout Converted? (1)", "type": "main", "index": 0 }]] },
-    "Check: Checkout Converted? (1)": { "main": [[{ "node": "IF: Converted? (1)", "type": "main", "index": 0 }]] },
-    "IF: Converted? (1)": {
-      "main": [
-        [{ "node": "Track: checkout_recovered (early)", "type": "main", "index": 0 }],
-        [{ "node": "Send: Final Reminder Push", "type": "main", "index": 0 }, { "node": "Send: Recovery Email", "type": "main", "index": 0 }]
-      ]
-    },
-    "Send: Final Reminder Push": { "main": [[{ "node": "Wait 2 hours", "type": "main", "index": 0 }]] },
-    "Send: Recovery Email": { "main": [[{ "node": "Wait 2 hours", "type": "main", "index": 0 }]] },
-    "Wait 2 hours": { "main": [[{ "node": "Check: Checkout Converted? (2)", "type": "main", "index": 0 }]] },
-    "Check: Checkout Converted? (2)": { "main": [[{ "node": "IF: Converted? (2)", "type": "main", "index": 0 }]] },
-    "IF: Converted? (2)": {
-      "main": [
-        [{ "node": "Track: checkout_recovered (early)", "type": "main", "index": 0 }],
-        [{ "node": "Issue: Recovery Voucher 30K", "type": "main", "index": 0 }]
-      ]
-    },
-    "Issue: Recovery Voucher 30K": { "main": [[{ "node": "Send: Recovery Offer Push", "type": "main", "index": 0 }]] },
-    "Send: Recovery Offer Push": { "main": [[{ "node": "Tag: cart_abandoned_lost", "type": "main", "index": 0 }]] }
-  },
-  "pinData": {},
-  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
-  "tags": [
-    { "id": "tag-bitenex", "name": "bitenex" },
-    { "id": "tag-checkout", "name": "checkout-recovery" }
-  ],
-  "versionId": "wf02-v1"
 }
