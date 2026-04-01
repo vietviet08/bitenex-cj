@@ -70,7 +70,7 @@
       "parameters": {
         "fromEmail": "noreply@bitenex.vn",
         "toEmail": "={{ $('Set Variables').item.json.email }}",
-        "subject": "🎉 Chào mừng {{ $('Set Variables').item.json.firstName }} đến với Bitenex!",
+        "subject": "=🎉 Chào mừng {{ $('Set Variables').item.json.firstName }} đến với Bitenex!",
         "emailType": "html",
         "message": "=<html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'><h1 style='color: #FF6B35;'>Chào {{ $('Set Variables').item.json.firstName }}! 👋</h1><p>Bạn đã gia nhập Bitenex — ứng dụng giao đồ ăn nhanh nhất tại {{ $('Set Variables').item.json.city }}!</p><p>🍜 Khám phá hàng trăm nhà hàng xung quanh bạn</p><p>🛵 Giao hàng trong 30 phút</p><p>💳 Thanh toán linh hoạt (VNPAY, COD, Ví điện tử)</p><a href='bitenexuser://home' style='display: inline-block; background: #FF6B35; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 20px;'>Đặt món ngay</a></body></html>"
       },
