@@ -1,0 +1,14 @@
+# Copy this file to `vault.yml`, replace placeholder values, then encrypt it:
+# ansible-vault encrypt customer-journey/infra/aws/ansible/vault.yml
+
+vault_bitenex_secret_key: "replace-with-long-random-secret"
+vault_bitenex_jwt_secret_key: "replace-with-long-random-jwt-secret"
+vault_bitenex_database_password: "replace-with-rds-password"
+vault_bitenex_internal_api_token: "replace-with-shared-internal-token"
+vault_bitenex_n8n_webhook_secret: "replace-with-n8n-hmac-secret"
+vault_bitenex_n8n_basic_auth_password: "replace-with-n8n-basic-auth-password"
+vault_bitenex_vnp_tmn_code: "replace-with-vnp-tmn-code"
+vault_bitenex_vnp_hash_secret: "replace-with-vnp-hash-secret"
+vault_bitenex_smtp_user: "replace-with-smtp-user"
+vault_bitenex_smtp_password: "replace-with-smtp-password"
+vault_sonarqube_postgres_password: "replace-with-sonarqube-db-password"

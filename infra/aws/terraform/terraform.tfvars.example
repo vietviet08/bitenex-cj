@@ -5,7 +5,7 @@ aws_region   = "ap-southeast-1"
 vpc_cidr     = "10.30.0.0/16"
 instance_type = "t3.large"
 key_name      = ""
-allowed_ssh_cidr = "0.0.0.0/0"
+allowed_ssh_cidr = "203.0.113.10/32"
 
 db_name             = "bitenex"
 db_username         = "bitenex_admin"

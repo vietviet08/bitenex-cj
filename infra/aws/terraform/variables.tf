@@ -37,7 +37,6 @@ variable "key_name" {
 variable "allowed_ssh_cidr" {
   type        = string
   description = "CIDR allowed to access SSH (22)"
-  default     = "0.0.0.0/0"
 }
 
 variable "db_name" {

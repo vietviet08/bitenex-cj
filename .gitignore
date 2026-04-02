@@ -1,11 +1,50 @@
-.agent
-.agents
-.codex
-.cursor
-.gemini
-.opencode
-.github/prompts
-.github/skills
-skills
-openspec
+# Local agent/tooling
+.agent/
+.agents/
+.codex/
+.cursor/
+.gemini/
+.opencode/
+.github/prompts/
+.github/skills/
+skills/
+openspec/
 AGENTS.md
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tmp
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ansible
+**/vault.yml
+*.retry
+.vault_pass.txt
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/

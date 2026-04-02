@@ -5,8 +5,36 @@
   vars:
       jenkins_apt_key_url: "https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key"
       jenkins_apt_repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
+      compose_cmd: "docker compose -f {{ bitenex_compose_file }}"
 
   tasks:
+      - name: Load vaulted deployment secrets
+        ansible.builtin.include_vars:
+            file: "{{ playbook_dir }}/../vault.yml"
+
+      - name: Assert required deployment inputs are set
+        ansible.builtin.assert:
+            that:
+                - bitenex_database_host != "replace-with-rds-endpoint"
+                - nginx_api_server_name != "api.example.com"
+                - bitenex_n8n_public_url != "http://n8n.example.com"
+                - bitenex_vnp_ipn_url != "https://api.example.com/api/v1/payments/webhook/vnpay"
+                - vault_bitenex_secret_key is defined
+                - vault_bitenex_jwt_secret_key is defined
+                - vault_bitenex_database_password is defined
+                - vault_bitenex_internal_api_token is defined
+                - vault_bitenex_n8n_webhook_secret is defined
+                - vault_bitenex_n8n_basic_auth_password is defined
+                - vault_sonarqube_postgres_password is defined
+                - not vault_bitenex_secret_key.startswith("replace-with-")
+                - not vault_bitenex_jwt_secret_key.startswith("replace-with-")
+                - not vault_bitenex_database_password.startswith("replace-with-")
+                - not vault_bitenex_internal_api_token.startswith("replace-with-")
+                - not vault_bitenex_n8n_webhook_secret.startswith("replace-with-")
+                - not vault_bitenex_n8n_basic_auth_password.startswith("replace-with-")
+                - not vault_sonarqube_postgres_password.startswith("replace-with-")
+            fail_msg: "Populate group_vars/all.yml and ansible/vault.yml with real deployment values before bootstrap."
+
       - name: Update apt cache
         ansible.builtin.apt:
             update_cache: true
@@ -23,8 +51,23 @@
                 - software-properties-common
                 - git
                 - net-tools
+                - nginx
                 - openjdk-17-jdk
             state: present
+
+      - name: Configure sysctl for container workloads
+        ansible.builtin.copy:
+            dest: /etc/sysctl.d/99-bitenex.conf
+            owner: root
+            group: root
+            mode: "0644"
+            content: |
+                vm.max_map_count=524288
+                fs.file-max=131072
+
+      - name: Apply sysctl settings
+        ansible.builtin.command: sysctl --system
+        changed_when: false
 
       - name: Create Docker keyring directory
         ansible.builtin.file:
@@ -58,6 +101,12 @@
       - name: Ensure Docker service is running
         ansible.builtin.service:
             name: docker
+            state: started
+            enabled: true
+
+      - name: Ensure Nginx service is running
+        ansible.builtin.service:
+            name: nginx
             state: started
             enabled: true
 
@@ -113,50 +162,74 @@
             force: true
         become_user: ubuntu
 
-      - name: Check required compose env files exist
-        ansible.builtin.stat:
-            path: "{{ item }}"
-        loop:
-            - "{{ bitenex_compose_dir }}/.env"
-            - "{{ bitenex_compose_dir }}/.env.docker"
-        register: env_files
+      - name: Render API environment file
+        ansible.builtin.template:
+            src: "{{ playbook_dir }}/../templates/bitenex.env.j2"
+            dest: "{{ bitenex_compose_dir }}/.env"
+            owner: ubuntu
+            group: ubuntu
+            mode: "0600"
 
-      - name: Warn when env files are missing
-        ansible.builtin.debug:
-            msg: "Missing {{ item.stat.path }}. Create env files before compose up."
-        loop: "{{ env_files.results }}"
-        when: not item.stat.exists
+      - name: Render Docker services environment file
+        ansible.builtin.template:
+            src: "{{ playbook_dir }}/../templates/bitenex.env.docker.j2"
+            dest: "{{ bitenex_compose_dir }}/.env.docker"
+            owner: ubuntu
+            group: ubuntu
+            mode: "0600"
+
+      - name: Render Nginx reverse proxy config
+        ansible.builtin.template:
+            src: "{{ playbook_dir }}/../templates/nginx-bitenex.conf.j2"
+            dest: /etc/nginx/sites-available/bitenex.conf
+            owner: root
+            group: root
+            mode: "0644"
+
+      - name: Enable Bitenex Nginx site
+        ansible.builtin.file:
+            src: /etc/nginx/sites-available/bitenex.conf
+            dest: /etc/nginx/sites-enabled/bitenex.conf
+            state: link
+
+      - name: Disable default Nginx site
+        ansible.builtin.file:
+            path: /etc/nginx/sites-enabled/default
+            state: absent
+
+      - name: Validate Nginx config
+        ansible.builtin.command: nginx -t
+        changed_when: false
+
+      - name: Reload Nginx
+        ansible.builtin.service:
+            name: nginx
+            state: reloaded
 
       - name: Pull docker images for stack
         ansible.builtin.command:
-            cmd: docker compose pull
+            cmd: "{{ compose_cmd }} pull"
             chdir: "{{ bitenex_compose_dir }}"
-        when: env_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
-
-      - name: Ensure local db container is removed (using RDS instead)
-        ansible.builtin.command:
-            cmd: docker compose stop db
-            chdir: "{{ bitenex_compose_dir }}"
-        failed_when: false
-        changed_when: false
-        when: env_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
-
-      - name: Remove db service container if exists
-        ansible.builtin.command:
-            cmd: docker compose rm -f db
-            chdir: "{{ bitenex_compose_dir }}"
-        failed_when: false
-        changed_when: false
-        when: env_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
-
-      - name: Deploy non-db services
-        ansible.builtin.command:
-            cmd: docker compose --profile dev-tools up -d --build redis n8n sonarqube pgadmin
-            chdir: "{{ bitenex_compose_dir }}"
-        when: env_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
 
       - name: Deploy docker compose stack
         ansible.builtin.command:
-            cmd: docker compose up -d --build --no-deps api
+            cmd: "{{ compose_cmd }} up -d --build"
             chdir: "{{ bitenex_compose_dir }}"
-        when: env_files.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
+
+      - name: Wait for API port on loopback
+        ansible.builtin.wait_for:
+            host: 127.0.0.1
+            port: "{{ bitenex_api_port }}"
+            delay: 5
+            timeout: 180
+
+      - name: Run Alembic migrations
+        ansible.builtin.command:
+            cmd: "{{ compose_cmd }} exec -T api alembic upgrade head"
+            chdir: "{{ bitenex_compose_dir }}"
+
+      - name: Show docker compose service status
+        ansible.builtin.command:
+            cmd: "{{ compose_cmd }} ps"
+            chdir: "{{ bitenex_compose_dir }}"
+        changed_when: false
