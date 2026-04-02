@@ -1,7 +1,7 @@
 variable "project_name" {
   type        = string
   description = "Project name prefix"
-  default     = "bitenex-cj"
+  default     = "bitenex"
 }
 
 variable "environment" {

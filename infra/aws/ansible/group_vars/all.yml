@@ -3,14 +3,17 @@ ansible_user: ubuntu
 n8n_version: "latest"
 
 bitenex_repo_url: "https://github.com/vietviet08/bitenex-api.git"
-bitenex_repo_version: "master"
-bitenex_compose_dir: "/opt/bitenex/repo/bitenex-api"
+bitenex_repo_version: "develop"
+bitenex_compose_dir: "/opt/bitenex/repo"
 bitenex_compose_file: "docker-compose.prod.yml"
 
 bitenex_app_name: "Bitenex"
 bitenex_app_env: "prod"
 bitenex_debug: false
 bitenex_api_version: "v1"
+nginx_enable_tls: true
+nginx_tls_ready: false
+letsencrypt_email: "viezquoc.dev@gmail.com"
 
 bitenex_database_host: "bitenex-prod-postgres.c9gm4myyy7j8.ap-southeast-1.rds.amazonaws.com"
 bitenex_database_port: 5432
@@ -26,27 +29,34 @@ bitenex_jwt_algorithm: "HS256"
 bitenex_access_token_expire_minutes: 30
 bitenex_refresh_token_expire_days: 7
 bitenex_cors_origins:
+    - "https://catcosy.shop"
+    - "https://www.catcosy.shop"
+    - "https://api.catcosy.shop"
     - "http://localhost:3000"
     - "http://localhost:8080"
-    - "http://54.251.139.183"
-    - "http://ec2-54-251-139-183.ap-southeast-1.compute.amazonaws.com"
 bitenex_ws_message_queue_size: 100
 
 bitenex_vnp_url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
 bitenex_vnp_return_url: "bitenexuser://payment/result"
-bitenex_vnp_ipn_url: "http://ec2-54-251-139-183.ap-southeast-1.compute.amazonaws.com/api/v1/payments/webhook/vnpay"
+bitenex_vnp_ipn_url: "https://api.catcosy.shop/api/v1/payments/webhook/vnpay"
 
 bitenex_n8n_base_url: "http://n8n:5678"
 bitenex_n8n_port: 5678
 bitenex_n8n_bind_address: "127.0.0.1"
-bitenex_n8n_protocol: "http"
-bitenex_n8n_public_url: "http://54.251.139.183"
+bitenex_n8n_protocol: "https"
+bitenex_n8n_public_url: "https://n8n.catcosy.shop"
 bitenex_n8n_webhook_enabled: true
 bitenex_n8n_basic_auth_active: true
 bitenex_n8n_basic_auth_user: "admin"
 bitenex_n8n_log_level: "info"
-bitenex_n8n_secure_cookie: false
+bitenex_n8n_secure_cookie: true
 bitenex_n8n_block_env_access_in_node: false
+
+pgadmin_bind_address: "127.0.0.1"
+pgadmin_port: 5050
+pgadmin_default_email: "viezquoc.dev@gmail.com"
+pgadmin_public_url: "https://pgadmin.catcosy.shop"
+pgadmin_enhanced_cookie_protection: true
 
 bitenex_timezone: "Asia/Ho_Chi_Minh"
 
@@ -66,5 +76,6 @@ sonarqube_postgres_user: "sonarqube"
 sonarqube_web_java_opts: "-Xms512m -Xmx512m"
 sonarqube_ce_java_opts: "-Xms512m -Xmx512m"
 
-nginx_api_server_name: "ec2-54-251-139-183.ap-southeast-1.compute.amazonaws.com"
-nginx_n8n_server_name: "54.251.139.183"
+nginx_api_server_name: "api.catcosy.shop"
+nginx_n8n_server_name: "n8n.catcosy.shop"
+nginx_pgadmin_server_name: "pgadmin.catcosy.shop"
