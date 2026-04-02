@@ -19,6 +19,26 @@ AGENTS.md
 *.swo
 *.tmp
 
+# Keys / certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Large archives / binaries
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.7z
+*.rar
+*.bin
+*.iso
+*.dmg
+
 # Terraform
 **/.terraform/
 *.tfstate
@@ -31,6 +51,7 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+.terraform
 
 # Ansible
 **/vault.yml
