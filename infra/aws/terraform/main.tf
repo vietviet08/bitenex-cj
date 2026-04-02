@@ -168,7 +168,7 @@ resource "aws_instance" "bitenex_compose_host" {
   associate_public_ip_address = true
 
   root_block_device {
-    volume_size = 80
+    volume_size = 30
     volume_type = "gp3"
   }
 

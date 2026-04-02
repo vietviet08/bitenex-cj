@@ -20,6 +20,7 @@ bitenex_database_port: 5432
 bitenex_database_name: "bitenex"
 bitenex_database_user: "bitenex_admin"
 bitenex_database_echo: false
+bitenex_database_sslmode: "require"
 
 bitenex_api_bind_address: "127.0.0.1"
 bitenex_api_port: 8000

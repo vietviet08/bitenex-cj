@@ -7,7 +7,7 @@
       "Port": {{ bitenex_database_port }},
       "MaintenanceDB": "{{ bitenex_database_name }}",
       "Username": "{{ bitenex_database_user }}",
-      "SSLMode": "prefer",
+      "SSLMode": "{{ bitenex_database_sslmode }}",
       "PassFile": "/pgpassfile"
     },
     "2": {

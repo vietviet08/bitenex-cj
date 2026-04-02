@@ -291,7 +291,7 @@
 
       - name: Deploy docker compose stack
         ansible.builtin.command:
-            cmd: "{{ compose_cmd }} up -d --build"
+            cmd: "{{ compose_cmd }} up -d --build --force-recreate"
             chdir: "{{ bitenex_compose_dir }}"
 
       - name: Wait for API port on loopback
