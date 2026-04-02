@@ -74,6 +74,7 @@ sonarqube_bind_address: "127.0.0.1"
 sonarqube_port: 9000
 sonarqube_postgres_db: "sonarqube"
 sonarqube_postgres_user: "sonarqube"
+sonarqube_public_url: "https://sonarqube.catcosy.shop"
 sonarqube_web_java_opts: "-Xms512m -Xmx512m"
 sonarqube_ce_java_opts: "-Xms512m -Xmx512m"
 
