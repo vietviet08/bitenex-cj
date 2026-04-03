@@ -34,6 +34,7 @@ bitenex_cors_origins:
     - "https://catcosy.shop"
     - "https://www.catcosy.shop"
     - "https://api.catcosy.shop"
+    - "https://admin.catcosy.shop"
     - "http://localhost:3000"
     - "http://localhost:8080"
 bitenex_ws_message_queue_size: 100

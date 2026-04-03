@@ -217,6 +217,49 @@ resource "aws_iam_role_policy" "compose_host_ecr" {
   policy = data.aws_iam_policy_document.compose_host_ecr.json
 }
 
+data "aws_iam_policy_document" "compose_host_admin_frontend" {
+  statement {
+    sid = "AllowAdminFrontendBucketList"
+
+    actions = [
+      "s3:GetBucketLocation",
+      "s3:ListBucket",
+    ]
+
+    resources = [aws_s3_bucket.admin_frontend.arn]
+  }
+
+  statement {
+    sid = "AllowAdminFrontendObjectDeploy"
+
+    actions = [
+      "s3:DeleteObject",
+      "s3:GetObject",
+      "s3:PutObject",
+    ]
+
+    resources = ["${aws_s3_bucket.admin_frontend.arn}/*"]
+  }
+
+  statement {
+    sid = "AllowAdminFrontendCloudFrontInvalidation"
+
+    actions = [
+      "cloudfront:CreateInvalidation",
+      "cloudfront:GetDistribution",
+      "cloudfront:GetDistributionConfig",
+    ]
+
+    resources = [aws_cloudfront_distribution.admin_frontend.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "compose_host_admin_frontend" {
+  name   = "${local.name}-compose-host-admin-frontend"
+  role   = aws_iam_role.compose_host.id
+  policy = data.aws_iam_policy_document.compose_host_admin_frontend.json
+}
+
 resource "aws_iam_instance_profile" "compose_host" {
   name = "${local.name}-compose-host-profile"
   role = aws_iam_role.compose_host.name

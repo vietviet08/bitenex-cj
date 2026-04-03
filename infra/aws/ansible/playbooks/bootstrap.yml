@@ -118,11 +118,23 @@
             dest: /etc/apt/keyrings/docker.asc
             mode: "0644"
 
+      - name: Download NodeSource apt gpg key
+        ansible.builtin.get_url:
+            url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+            dest: /etc/apt/keyrings/nodesource.asc
+            mode: "0644"
+
       - name: Add Docker apt repository
         ansible.builtin.apt_repository:
             repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
             state: present
             filename: docker
+
+      - name: Add NodeSource apt repository
+        ansible.builtin.apt_repository:
+            repo: "deb [signed-by=/etc/apt/keyrings/nodesource.asc] https://deb.nodesource.com/node_22.x nodistro main"
+            state: present
+            filename: nodesource
 
       - name: Install Docker engine and compose plugin
         ansible.builtin.apt:
@@ -132,6 +144,7 @@
                 - containerd.io
                 - docker-buildx-plugin
                 - docker-compose-plugin
+                - nodejs
             state: present
             update_cache: true
 
@@ -140,6 +153,16 @@
             name: docker
             state: started
             enabled: true
+
+      - name: Verify Node.js is available
+        ansible.builtin.command:
+            cmd: node --version
+        changed_when: false
+
+      - name: Verify npm is available
+        ansible.builtin.command:
+            cmd: npm --version
+        changed_when: false
 
       - name: Ensure Nginx service is running
         ansible.builtin.service:
