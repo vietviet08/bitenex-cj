@@ -63,6 +63,12 @@ server {
 {% if nginx_pgadmin_server_name | length > 0 %}
 {{ http_server(nginx_pgadmin_server_name, pgadmin_port, "50m") }}
 {% endif %}
+{% if nginx_jenkins_server_name | length > 0 %}
+{{ http_server(nginx_jenkins_server_name, jenkins_port, "50m") }}
+{% endif %}
+{% if nginx_sonarqube_server_name | length > 0 %}
+{{ http_server(nginx_sonarqube_server_name, sonarqube_port, "50m") }}
+{% endif %}
 
 {% if nginx_enable_tls and nginx_tls_ready %}
 {{ https_server(nginx_api_server_name, bitenex_api_port, "25m") }}
@@ -71,5 +77,11 @@ server {
 {% endif %}
 {% if nginx_pgadmin_server_name | length > 0 %}
 {{ https_server(nginx_pgadmin_server_name, pgadmin_port, "50m") }}
+{% endif %}
+{% if nginx_jenkins_server_name | length > 0 %}
+{{ https_server(nginx_jenkins_server_name, jenkins_port, "50m") }}
+{% endif %}
+{% if nginx_sonarqube_server_name | length > 0 %}
+{{ https_server(nginx_sonarqube_server_name, sonarqube_port, "50m") }}
 {% endif %}
 {% endif %}

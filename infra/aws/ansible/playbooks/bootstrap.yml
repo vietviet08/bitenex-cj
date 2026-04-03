@@ -9,7 +9,7 @@
       jenkins_apt_keyring_path: "/etc/apt/keyrings/jenkins-keyring.asc"
       jenkins_apt_repo: "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
       compose_cmd: "docker compose -f {{ bitenex_compose_file }}"
-      nginx_tls_domains: "{{ [nginx_api_server_name, nginx_n8n_server_name, nginx_pgadmin_server_name] | reject('equalto', '') | unique | list }}"
+      nginx_tls_domains: "{{ [nginx_api_server_name, nginx_n8n_server_name, nginx_pgadmin_server_name, nginx_jenkins_server_name, nginx_sonarqube_server_name] | reject('equalto', '') | unique | list }}"
 
   tasks:
       - name: Load vaulted deployment secrets
@@ -24,6 +24,8 @@
                 - bitenex_n8n_public_url != "http://n8n.example.com"
                 - bitenex_vnp_ipn_url != "https://api.example.com/api/v1/payments/webhook/vnpay"
                 - nginx_pgadmin_server_name != "pgadmin.example.com"
+                - nginx_jenkins_server_name != "jenkins.example.com"
+                - nginx_sonarqube_server_name != "sonarqube.example.com"
                 - letsencrypt_email | length > 3
                 - "'@' in letsencrypt_email"
                 - vault_bitenex_secret_key is defined
@@ -291,7 +293,7 @@
 
       - name: Deploy docker compose stack
         ansible.builtin.command:
-            cmd: "{{ compose_cmd }} up -d --build"
+            cmd: "{{ compose_cmd }} up -d --build --force-recreate"
             chdir: "{{ bitenex_compose_dir }}"
 
       - name: Wait for API port on loopback

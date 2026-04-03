@@ -80,3 +80,21 @@ variable "domain_name" {
   description = "Primary domain name (optional, for future ALB/Route53 setup)"
   default     = ""
 }
+
+variable "admin_domain_name" {
+  type        = string
+  description = "Custom domain for bitenex-admin static site. Defaults to admin.<domain_name> when empty."
+  default     = ""
+}
+
+variable "admin_cloudfront_certificate_arn" {
+  type        = string
+  description = "Issued ACM certificate ARN in us-east-1 for CloudFront. Leave empty on first apply if DNS validation is pending."
+  default     = ""
+}
+
+variable "admin_cloudfront_price_class" {
+  type        = string
+  description = "CloudFront price class for bitenex-admin."
+  default     = "PriceClass_200"
+}

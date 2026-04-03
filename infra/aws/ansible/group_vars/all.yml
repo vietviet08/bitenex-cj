@@ -18,8 +18,9 @@ letsencrypt_email: "viezquoc.dev@gmail.com"
 bitenex_database_host: "bitenex-prod-postgres.c9gm4myyy7j8.ap-southeast-1.rds.amazonaws.com"
 bitenex_database_port: 5432
 bitenex_database_name: "bitenex"
-bitenex_database_user: "bitenex_admin"
+bitenex_database_user: "bitenex"
 bitenex_database_echo: false
+bitenex_database_sslmode: "require"
 
 bitenex_api_bind_address: "127.0.0.1"
 bitenex_api_port: 8000
@@ -73,9 +74,13 @@ sonarqube_bind_address: "127.0.0.1"
 sonarqube_port: 9000
 sonarqube_postgres_db: "sonarqube"
 sonarqube_postgres_user: "sonarqube"
+sonarqube_public_url: "https://sonarqube.catcosy.shop"
 sonarqube_web_java_opts: "-Xms512m -Xmx512m"
 sonarqube_ce_java_opts: "-Xms512m -Xmx512m"
 
+jenkins_port: 8080
 nginx_api_server_name: "api.catcosy.shop"
 nginx_n8n_server_name: "n8n.catcosy.shop"
 nginx_pgadmin_server_name: "pgadmin.catcosy.shop"
+nginx_jenkins_server_name: "jenkins.catcosy.shop"
+nginx_sonarqube_server_name: "sonarqube.catcosy.shop"
