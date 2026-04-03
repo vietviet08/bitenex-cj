@@ -22,6 +22,14 @@ output "rds_postgres_port" {
   value = aws_db_instance.postgres.port
 }
 
+output "compose_host_iam_role_name" {
+  value = aws_iam_role.compose_host.name
+}
+
+output "compose_host_instance_profile_name" {
+  value = aws_iam_instance_profile.compose_host.name
+}
+
 output "admin_frontend_bucket_name" {
   value = aws_s3_bucket.admin_frontend.bucket
 }
@@ -46,4 +54,12 @@ output "admin_frontend_certificate_validation_records" {
       value = dvo.resource_record_value
     }
   ], [])
+}
+
+output "ecr_api_repository_name" {
+  value = aws_ecr_repository.bitenex_api.name
+}
+
+output "ecr_api_repository_url" {
+  value = aws_ecr_repository.bitenex_api.repository_url
 }

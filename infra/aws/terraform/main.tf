@@ -164,11 +164,70 @@ resource "aws_db_instance" "postgres" {
   skip_final_snapshot    = true
 }
 
+data "aws_iam_policy_document" "compose_host_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "compose_host" {
+  name               = "${local.name}-compose-host-role"
+  assume_role_policy = data.aws_iam_policy_document.compose_host_assume_role.json
+}
+
+data "aws_iam_policy_document" "compose_host_ecr" {
+  statement {
+    sid = "AllowEcrLogin"
+
+    actions = [
+      "ecr:GetAuthorizationToken",
+    ]
+
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "AllowPushPullBitenexApiRepository"
+
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:BatchGetImage",
+      "ecr:CompleteLayerUpload",
+      "ecr:DescribeImages",
+      "ecr:DescribeRepositories",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:InitiateLayerUpload",
+      "ecr:ListImages",
+      "ecr:PutImage",
+      "ecr:UploadLayerPart",
+    ]
+
+    resources = [aws_ecr_repository.bitenex_api.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "compose_host_ecr" {
+  name   = "${local.name}-compose-host-ecr"
+  role   = aws_iam_role.compose_host.id
+  policy = data.aws_iam_policy_document.compose_host_ecr.json
+}
+
+resource "aws_iam_instance_profile" "compose_host" {
+  name = "${local.name}-compose-host-profile"
+  role = aws_iam_role.compose_host.name
+}
+
 resource "aws_instance" "bitenex_compose_host" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type
   subnet_id                   = aws_subnet.public[0].id
   vpc_security_group_ids      = [aws_security_group.server.id]
+  iam_instance_profile        = aws_iam_instance_profile.compose_host.name
   key_name                    = var.key_name != "" ? var.key_name : null
   associate_public_ip_address = true
 
@@ -180,6 +239,15 @@ resource "aws_instance" "bitenex_compose_host" {
   tags = {
     Name = "${local.name}-bitenex-compose-host"
     Role = "bitenex-api-host"
+  }
+}
+
+resource "aws_ecr_repository" "bitenex_api" {
+  name                 = var.ecr_api_repository_name
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
   }
 }
 
