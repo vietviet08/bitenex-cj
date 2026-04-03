@@ -2,6 +2,8 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+data "aws_caller_identity" "current" {}
+
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
@@ -18,8 +20,11 @@ data "aws_ami" "ubuntu" {
 }
 
 locals {
-  name = "${var.project_name}-${var.environment}"
-  azs  = slice(data.aws_availability_zones.available.names, 0, 2)
+  name                         = "${var.project_name}-${var.environment}"
+  azs                          = slice(data.aws_availability_zones.available.names, 0, 2)
+  admin_domain_name            = var.admin_domain_name != "" ? var.admin_domain_name : (var.domain_name != "" ? "admin.${var.domain_name}" : "")
+  admin_bucket_name            = lower("${var.project_name}-${var.environment}-admin-${data.aws_caller_identity.current.account_id}")
+  admin_use_custom_certificate = local.admin_domain_name != "" && var.admin_cloudfront_certificate_arn != ""
 }
 
 resource "aws_vpc" "main" {
@@ -176,4 +181,137 @@ resource "aws_instance" "bitenex_compose_host" {
     Name = "${local.name}-bitenex-compose-host"
     Role = "bitenex-api-host"
   }
+}
+
+resource "aws_s3_bucket" "admin_frontend" {
+  bucket = local.admin_bucket_name
+}
+
+resource "aws_s3_bucket_public_access_block" "admin_frontend" {
+  bucket                  = aws_s3_bucket.admin_frontend.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_ownership_controls" "admin_frontend" {
+  bucket = aws_s3_bucket.admin_frontend.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "admin_frontend" {
+  bucket = aws_s3_bucket.admin_frontend.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_cloudfront_origin_access_control" "admin_frontend" {
+  name                              = "${local.name}-admin-oac"
+  description                       = "Origin access control for bitenex-admin static site"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_acm_certificate" "admin_frontend" {
+  count             = local.admin_domain_name != "" ? 1 : 0
+  provider          = aws.us_east_1
+  domain_name       = local.admin_domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_cloudfront_distribution" "admin_frontend" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "Static hosting for bitenex-admin"
+  default_root_object = "index.html"
+  price_class         = var.admin_cloudfront_price_class
+  aliases             = local.admin_use_custom_certificate ? [local.admin_domain_name] : []
+
+  origin {
+    domain_name              = aws_s3_bucket.admin_frontend.bucket_regional_domain_name
+    origin_access_control_id = aws_cloudfront_origin_access_control.admin_frontend.id
+    origin_id                = "admin-s3-origin"
+  }
+
+  default_cache_behavior {
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD", "OPTIONS"]
+    target_origin_id = "admin-s3-origin"
+    compress         = true
+
+    viewer_protocol_policy = "redirect-to-https"
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+  }
+
+  custom_error_response {
+    error_code            = 403
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 0
+  }
+
+  custom_error_response {
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 0
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = !local.admin_use_custom_certificate
+    acm_certificate_arn            = local.admin_use_custom_certificate ? var.admin_cloudfront_certificate_arn : null
+    ssl_support_method             = local.admin_use_custom_certificate ? "sni-only" : null
+    minimum_protocol_version       = local.admin_use_custom_certificate ? "TLSv1.2_2021" : "TLSv1"
+  }
+}
+
+data "aws_iam_policy_document" "admin_frontend_bucket_policy" {
+  statement {
+    sid = "AllowCloudFrontServicePrincipalReadOnly"
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    actions = ["s3:GetObject"]
+
+    resources = ["${aws_s3_bucket.admin_frontend.arn}/*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.admin_frontend.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "admin_frontend" {
+  bucket = aws_s3_bucket.admin_frontend.id
+  policy = data.aws_iam_policy_document.admin_frontend_bucket_policy.json
 }
