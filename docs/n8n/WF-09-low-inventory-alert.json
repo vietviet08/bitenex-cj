@@ -1,0 +1,322 @@
+{
+  "name": "WF-09-low-inventory-alert",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/internal/inventory/low-stock-items'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a2eb2200-4e8b-4c6f-8aff-14c82aff6077",
+      "name": "Get Low Stock Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3088,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate response has items\nconst items = $input.all()[0].json.items || [];\nconst validated = {\n  success: Array.isArray(items) && items.length > 0,\n  count: items.length,\n  items: items,\n  timestamp: new Date().toISOString()\n};\nreturn [validated];"
+      },
+      "id": "9b3da5fd-41a3-40b0-bb50-874fe886b706",
+      "name": "Validate & Count Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2864,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.count}}",
+              "operation": ">",
+              "value2": 0
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6935355a-3f76-45d2-bf7d-f82c951cc55b",
+      "name": "Has Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2640,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rate limiter - max 10 requests per second\nconst MAX_PER_SECOND = 10;\nconst items = $input.all()[0].json.items || [];\nconst delay = Math.ceil(1000 / MAX_PER_SECOND);\n\nreturn items.map(item => ({\n  ...item,\n  throttle_delay: delay,\n  priority: item.current_stock <= 5 ? 'high' : 'medium'\n}));"
+      },
+      "id": "80fce2b3-5e59-4e36-8510-0801c1ffcb8f",
+      "name": "Rate Limiter & Priority",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2416,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "0ab084b8-d981-4d01-9302-5aaa17b2f880",
+      "name": "Loop Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -2192,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/notifications/send'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"merchant_id\": {{JSON.stringify($json.merchant_id)}},\n  \"user_id\": {{JSON.stringify($json.merchant_id)}},\n  \"channel\": \"email\",\n  \"template\": \"low_inventory\",\n  \"subject\": \"Stock Alert: \" + {{JSON.stringify($json.item_name)}} + \" Running Low\",\n  \"properties\": {\n    \"item_name\": {{JSON.stringify($json.item_name)}},\n    \"sku\": {{JSON.stringify($json.sku)}},\n    \"current_stock\": {{$json.current_stock}},\n    \"threshold\": {{$json.threshold}},\n    \"priority\": {{JSON.stringify($json.priority)}}\n  },\n  \"dedupe_key\": \"stock_alert_\" + {{JSON.stringify($json.sku)}} + \"_\" + new Date().toISOString().split('T')[0]\n}",
+        "options": {}
+      },
+      "id": "e96edf61-73b5-4b02-aed3-48bfdb1a1e3e",
+      "name": "Send Email Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1968,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/notifications/send'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"merchant_id\": {{JSON.stringify($json.merchant_id)}},\n  \"user_id\": {{JSON.stringify($json.merchant_id)}},\n  \"channel\": \"push\",\n  \"template\": \"low_inventory_push\",\n  \"title\": \"🔴 Stock Alert\",\n  \"body\": {{JSON.stringify($json.item_name)}} + \": Only \" + {{$json.current_stock}} + \" left\",\n  \"properties\": {\n    \"item_sku\": {{JSON.stringify($json.sku)}},\n    \"current_stock\": {{$json.current_stock}},\n    \"priority\": {{JSON.stringify($json.priority)}}\n  },\n  \"dedupe_key\": \"stock_push_\" + {{JSON.stringify($json.sku)}} + \"_\" + new Date().toISOString().split('T')[0]\n}",
+        "options": {}
+      },
+      "id": "3116e622-c820-4172-a780-0d2fc9c685d6",
+      "name": "Send Push Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1968,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/internal/events/track'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event_name\": \"inventory_alert_sent\",\n  \"timestamp\": new Date().toISOString(),\n  \"properties\": {\n    \"merchant_id\": {{JSON.stringify($json.merchant_id)}},\n    \"item_sku\": {{JSON.stringify($json.sku)}},\n    \"current_stock\": {{$json.current_stock}},\n    \"priority\": {{JSON.stringify($json.priority)}}\n  }\n}",
+        "options": {}
+      },
+      "id": "5e2a6fec-13b9-4617-a7ee-37a8e49b26c1",
+      "name": "Track Alert Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1744,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "6a21131d-8e16-4a37-8e89-4a629d6436a4",
+      "name": "Trigger - Every 30m",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3312,
+        720
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Low Stock Items": {
+      "main": [
+        [
+          {
+            "node": "Validate & Count Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Count Items": {
+      "main": [
+        [
+          {
+            "node": "Has Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Items?": {
+      "main": [
+        [
+          {
+            "node": "Rate Limiter & Priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limiter & Priority": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send Email Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Push Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Alert": {
+      "main": [
+        [
+          {
+            "node": "Track Alert Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Push Alert": {
+      "main": [
+        [
+          {
+            "node": "Track Alert Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Alert Event": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger - Every 30m": {
+      "main": [
+        [
+          {
+            "node": "Get Low Stock Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0c26b422-013d-4a5d-be8c-a085bac423db",
+  "meta": {
+    "instanceId": "0196dd1049bd13c155e7b6b46fdaf472bff41b7a027b83a572a2f9483dea0a10"
+  },
+  "id": "w7fWztyeqM9oWDqe",
+  "tags": []
+}

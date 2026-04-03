@@ -1,0 +1,349 @@
+{
+  "name": "WF-10-customer-referral-program",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "referral-created",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "58d3bb7d-be9b-4dc3-9b7b-808e1b9d7446",
+      "name": "Referral Created Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -3312,
+        1728
+      ],
+      "webhookId": "bitenex-referral-created-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate referral data and check for duplicates\nconst referrer_id = $json.body?.referrer_id;\nconst referee_id = $json.body?.referee_id;\n\nconst validation = {\n  valid: referrer_id && referee_id && referrer_id !== referee_id,\n  referrer_id: referrer_id,\n  referee_id: referee_id,\n  timestamp: new Date().toISOString(),\n  dedupe_key: 'referral_' + referrer_id + '_' + referee_id\n};\n\nif (!validation.valid) {\n  throw new Error('Invalid referral data or duplicate referrer/referee');\n}\n\nreturn [validation];"
+      },
+      "id": "b4c43f9d-3e11-410f-b973-39bef909dad0",
+      "name": "Validate & Dedupe Referral",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3088,
+        1728
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/internal/events/track'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event_name\": \"referral_initiated\",\n  \"user_id\": {{JSON.stringify($json.referrer_id)}},\n  \"timestamp\": {{JSON.stringify($json.timestamp)}},\n  \"properties\": {\n    \"referral_code\": {{JSON.stringify($json.body.referral_code)}},\n    \"referee_id\": {{JSON.stringify($json.referee_id)}},\n    \"reward_amount\": {{$json.body.reward_amount || 50000}},\n    \"currency\": {{JSON.stringify($json.body.currency || 'VND')}}\n  }\n}",
+        "options": {}
+      },
+      "id": "4711c376-955d-4224-a543-648f534e4898",
+      "name": "Track Referral Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2864,
+        1728
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/notifications/send'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": {{JSON.stringify($json.referee_id)}},\n  \"channel\": \"email\",\n  \"template\": \"referral_welcome_bonus\",\n  \"subject\": \"🎁 Welcome Bonus!\",\n  \"properties\": {\n    \"referrer_name\": {{JSON.stringify($json.body.referrer_name || 'a friend')}},\n    \"reward_amount\": {{$json.body.reward_amount || 50000}},\n    \"currency\": {{JSON.stringify($json.body.currency || 'VND')}},\n    \"bonus_code\": {{JSON.stringify($json.body.bonus_code || 'WELCOME50K')}}\n  },\n  \"dedupe_key\": {{JSON.stringify($json.dedupe_key + '_email')}}\n}",
+        "options": {}
+      },
+      "id": "5a117235-8aeb-48bc-97eb-eeeaaa8f085d",
+      "name": "Send Welcome Email to Referee",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2640,
+        1536
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/notifications/send'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": {{JSON.stringify($json.referee_id)}},\n  \"channel\": \"push\",\n  \"template\": \"referral_welcome_push\",\n  \"title\": \"🎁 Welcome Bonus!\",\n  \"body\": \"50,000 VND ready to use!\",\n  \"properties\": {\n    \"action_url\": \"/app/vouchers\",\n    \"bonus_code\": {{JSON.stringify($json.body.bonus_code || 'WELCOME50K')}}\n  },\n  \"dedupe_key\": {{JSON.stringify($json.dedupe_key + '_push')}}\n}",
+        "options": {}
+      },
+      "id": "5ff49920-bd3f-411d-834f-8714af338062",
+      "name": "Send Welcome Push to Referee",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2640,
+        1728
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/notifications/send'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": {{JSON.stringify($json.referrer_id)}},\n  \"channel\": \"email\",\n  \"template\": \"referral_reward_confirmation\",\n  \"subject\": \"✅ Referral Reward Confirmed!\",\n  \"properties\": {\n    \"reward_amount\": {{$json.body.reward_amount || 50000}},\n    \"currency\": {{JSON.stringify($json.body.currency || 'VND')}}\n  },\n  \"dedupe_key\": {{JSON.stringify($json.dedupe_key + '_referrer_email')}}\n}",
+        "options": {}
+      },
+      "id": "68d9e7e9-5942-4b77-86a8-f32069f73043",
+      "name": "Send Reward Email to Referrer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2640,
+        1920
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/internal/marketing/issue-voucher'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": {{JSON.stringify($json.referee_id)}},\n  \"voucher_code\": {{JSON.stringify($json.body.bonus_code || 'WELCOME50K')}},\n  \"discount_type\": \"fixed\",\n  \"discount_value\": {{$json.body.reward_amount || 50000}},\n  \"min_order_value\": {{$json.body.min_order_value || 100000}},\n  \"max_uses\": 1,\n  \"source\": \"referral_program\"\n}",
+        "options": {}
+      },
+      "id": "c52c67ac-62d2-4217-b79d-a17bca7d66b7",
+      "name": "Issue Voucher to Referee",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2416,
+        1632
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/internal/marketing/issue-voucher'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": {{JSON.stringify($json.referrer_id)}},\n  \"voucher_code\": {{JSON.stringify($json.body.referrer_code || 'REFERFRIEND')}},\n  \"discount_type\": \"fixed\",\n  \"discount_value\": {{$json.body.reward_amount || 50000}},\n  \"min_order_value\": {{$json.body.min_order_value || 150000}},\n  \"max_uses\": 1,\n  \"source\": \"referral_reward\"\n}",
+        "options": {}
+      },
+      "id": "7da11f39-7b59-4f9e-b04d-4564154711b5",
+      "name": "Issue Voucher to Referrer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2416,
+        1920
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Referral processed successfully\"\n}",
+        "options": {}
+      },
+      "id": "da296a26-b35a-4cf6-a94a-c2d2b7749b2d",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -2192,
+        1728
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Referral Created Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate & Dedupe Referral",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Dedupe Referral": {
+      "main": [
+        [
+          {
+            "node": "Track Referral Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Referral Event": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome Email to Referee",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Welcome Push to Referee",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Reward Email to Referrer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome Email to Referee": {
+      "main": [
+        [
+          {
+            "node": "Issue Voucher to Referee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome Push to Referee": {
+      "main": [
+        [
+          {
+            "node": "Issue Voucher to Referee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reward Email to Referrer": {
+      "main": [
+        [
+          {
+            "node": "Issue Voucher to Referrer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Issue Voucher to Referee": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Issue Voucher to Referrer": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "26eb156d-60d0-45c4-a054-0d4cf438842a",
+  "meta": {
+    "instanceId": "0196dd1049bd13c155e7b6b46fdaf472bff41b7a027b83a572a2f9483dea0a10"
+  },
+  "id": "u18XcL0Jeq46EVHP",
+  "tags": []
+}

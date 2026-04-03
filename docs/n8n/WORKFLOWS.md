@@ -54,18 +54,21 @@ graph TB
 
 ---
 
-## 🗺️ Tổng quan 8 Workflows
+## 🗺️ Tổng quan 11 Workflows
 
-| # | Workflow | Trigger | Kênh | Mục tiêu |
-|---|----------|---------|------|----------|
-| WF-01 | Onboarding → First Order | `user.registered` | Push, Email | Chuyển đổi người dùng mới → đơn đầu tiên |
-| WF-02 | Abandoned Checkout Recovery | `checkout.abandoned` | Push, Email, SMS | Thu hồi checkout bị bỏ dở |
-| WF-03 | Order Lifecycle Orchestration | `order.status_changed` | Push, In-App, WebSocket | Cập nhật realtime trạng thái đơn hàng |
-| WF-04 | Delivered → Review + Reorder | `order.delivered` | Push, Email | Thu thập đánh giá + kích thích reorder |
-| WF-05 | Driver Dispatch SLA Monitor | `dispatch.assigned` + Cron | Slack, Push | Giám sát SLA giao hàng, cảnh báo chậm trễ |
-| WF-06 | Payment Failure Recovery | `payment.failed` | Push, Email, SMS | Khôi phục thanh toán thất bại |
-| WF-07 | Merchant Daily Analytics Digest | Cron 08:00 | Email, Slack | Báo cáo doanh thu hàng ngày cho merchant |
-| WF-08 | Win-back Lapsed Users | Cron daily | Push, Email | Re-engage người dùng không hoạt động |
+| #     | Workflow                        | Trigger                    | Kênh                    | Mục tiêu                                             |
+| ----- | ------------------------------- | -------------------------- | ----------------------- | ---------------------------------------------------- |
+| WF-01 | Onboarding → First Order        | `user.registered`          | Push, Email             | Chuyển đổi người dùng mới → đơn đầu tiên             |
+| WF-02 | Abandoned Checkout Recovery     | `checkout.abandoned`       | Push, Email, SMS        | Thu hồi checkout bị bỏ dở                            |
+| WF-03 | Order Lifecycle Orchestration   | `order.status_changed`     | Push, In-App, WebSocket | Cập nhật realtime trạng thái đơn hàng                |
+| WF-04 | Delivered → Review + Reorder    | `order.delivered`          | Push, Email             | Thu thập đánh giá + kích thích reorder               |
+| WF-05 | Driver Dispatch SLA Monitor     | `dispatch.assigned` + Cron | Slack, Push             | Giám sát SLA giao hàng, cảnh báo chậm trễ            |
+| WF-06 | Payment Failure Recovery        | `payment.failed`           | Push, Email, SMS        | Khôi phục thanh toán thất bại                        |
+| WF-07 | Merchant Daily Analytics Digest | Cron 08:00                 | Email, Slack            | Báo cáo doanh thu hàng ngày cho merchant             |
+| WF-08 | Win-back Lapsed Users           | Cron daily                 | Push, Email             | Re-engage người dùng không hoạt động                 |
+| WF-09 | Low Inventory Alert             | Cron 30 minutes            | Email, Push             | Cảnh báo merchant khi tồn kho thấp                   |
+| WF-10 | Customer Referral Program       | `referral.created`         | Email, Push             | Quản lý chương trình referral & trao thưởng          |
+| WF-11 | Promotional Campaign Launcher   | Cron 10:00 AM              | Email, Push             | Gửi chiến dịch khuyến mãi đến các segment khách hàng |
 
 ---
 
@@ -97,6 +100,7 @@ flowchart TD
 ```
 
 **Nodes sử dụng**:
+
 - `Webhook` (trigger)
 - `Set` (biến)
 - `HTTP Request` (gọi API)
@@ -107,6 +111,7 @@ flowchart TD
 - `Slack` (tracking log)
 
 **Payload webhook mẫu**:
+
 ```json
 {
   "userId": "user_abc123",
@@ -153,6 +158,7 @@ flowchart TD
 ```
 
 **Nodes sử dụng**:
+
 - `Webhook`, `Set`, `IF`, `Switch`
 - `HTTP Request` (cart status, voucher)
 - `Send Email` (HTML template)
@@ -196,6 +202,7 @@ flowchart TD
 ```
 
 **Nodes sử dụng**:
+
 - `Webhook` (trigger)
 - `Respond to Webhook` (async – trả lời ngay)
 - `Set` (biến)
@@ -205,6 +212,7 @@ flowchart TD
 - `IF` (kiểm tra DELIVERED để trigger WF-04)
 
 **Payload webhook mẫu**:
+
 ```json
 {
   "orderId": "ord_xyz789",
@@ -258,6 +266,7 @@ flowchart TD
 ```
 
 **Nodes sử dụng**:
+
 - `Webhook`, `Set`, `Wait`, `IF`
 - `HTTP Request` (review status, voucher API)
 - `Send Email` (review request template)
@@ -290,6 +299,7 @@ flowchart TD
 > Switch dùng `typeVersion: 1` – string match trực tiếp trên `slaStatus`.
 
 **Nodes sử dụng**:
+
 - `Schedule Trigger` (cron `*/5 * * * *`)
 - `HTTP Request` (GET active deliveries, POST voucher, POST Slack)
 - `Split In Batches` (20 đơn/batch)
@@ -331,6 +341,7 @@ flowchart TD
 ```
 
 **Nodes sử dụng**:
+
 - `Webhook`, `Set`, `Switch`
 - `HTTP Request` (payment status, cancel order)
 - `Send Email`, `Twilio SMS`
@@ -369,6 +380,7 @@ flowchart TD
 ```
 
 **Nodes sử dụng**:
+
 - `Schedule Trigger` (cron)
 - `HTTP Request` (active merchants, stats)
 - `Split In Batches` (pagination)
@@ -413,6 +425,7 @@ flowchart TD
 > sau đó Switch `typeVersion: 1` match string để route đúng luồng. Không cần Switch v3 phức tạp.
 
 **Nodes sử dụng**:
+
 - `Schedule Trigger` (cron `0 10 * * *`)
 - `HTTP Request` (GET lapsed users, GET last order, POST voucher, GET activity)
 - `Split In Batches` (50 users/batch)
@@ -421,6 +434,152 @@ flowchart TD
 - `Send Email` (HTML voucher template cho 14d)
 - `Wait` (3 ngày)
 - `IF` (kiểm tra user đã quay lại chưa)
+
+---
+
+## WF-09: Low Inventory Alert
+
+**Mục tiêu**: Giám sát tồn kho hàng hóa và cảnh báo merchant khi mức tồn kho thấp hơn ngưỡng.
+
+**Trigger**: Cron `*/30 * * * *` (mỗi 30 phút)
+
+```mermaid
+flowchart TD
+    A([⏰ Cron Every 30m]) --> B[GET /internal/inventory/low-stock-items]
+    B --> C{Has Low Stock Items?}
+    C -- "✅ Có" --> D[Loop Each Item]
+    C -- "❌ Không" --> E[End]
+    D --> F[Send Email Alert\nSubject: Hàng sắp hết]
+    D --> G[Send Push Alert\nTitle: Stock Alert]
+    F --> H[Track: inventory_alert_sent]
+    G --> H
+    H --> I[End]
+```
+
+**Nodes sử dụng**:
+
+- `Schedule Trigger` (Cron 30 phút)
+- `HTTP Request` (GET low stock items, POST notifications, POST track event)
+- `IF` (kiểm tra có items hay không)
+- `Split In Batches` (loop qua từng item)
+- Email & Push notification gửi đến merchant
+
+**Konfigurasi**:
+
+```json
+{
+  "check_interval_minutes": 30,
+  "low_stock_threshold": 10,
+  "critical_stock_threshold": 5,
+  "notification_channels": ["email", "push"]
+}
+```
+
+---
+
+## WF-10: Customer Referral Program
+
+**Mục tiêu**: Quản lý chương trình referral, trao thưởng cho người giới thiệu và khách hàng mới.
+
+**Trigger**: Webhook `POST /webhook/bitenex/referral-created`
+
+```mermaid
+flowchart TD
+    A([🔔 Webhook\nreferral.created]) --> B[Validate Referral Data]
+    B --> C{Valid?}
+    C -- "❌ Invalid" --> D[End]
+    C -- "✅ Valid" --> E[Track: referral_initiated]
+    E --> F[Send Welcome Email to Referee]
+    E --> G[Send Welcome Push to Referee]
+    E --> H[Send Reward Confirmation to Referrer]
+    F --> I[Issue Voucher to Referee\n50K bonus]
+    G --> I
+    H --> J[Issue Voucher to Referrer\n50K reward]
+    I --> K[End]
+    J --> K
+```
+
+**Nodes sử dụng**:
+
+- `Webhook` (trigger khi referral được tạo)
+- `HTTP Request` (validation, tracking events, issue vouchers)
+- `IF` (kiểm tra dữ liệu hợp lệ)
+- Email notifications cho cả referrer và referee
+- Push notifications
+- Voucher issuance API
+
+**Konfigurasi**:
+
+```json
+{
+  "referee_bonus": 50000,
+  "referrer_reward": 50000,
+  "currency": "VND",
+  "min_order_value": 100000,
+  "validity_days": 30,
+  "max_uses": 1
+}
+```
+
+---
+
+## WF-11: Promotional Campaign Launcher
+
+**Mục tiêu**: Gửi các chiến dịch khuyến mãi có mục tiêu đến các segment khách hàng cụ thể dựa trên lịch biểu.
+
+**Trigger**: Cron `0 10 * * *` (10:00 sáng mỗi ngày)
+
+```mermaid
+flowchart TD
+    A([⏰ Cron 10:00 Daily]) --> B[GET /internal/campaigns/scheduled-today]
+    B --> C{Has Campaigns?}
+    C -- "❌ Không" --> D[End]
+    C -- "✅ Có" --> E[Loop Each Campaign]
+    E --> F[GET /internal/segments/:id/users]
+    F --> G[Loop Each User in Segment]
+    G --> H[Send Email Campaign]
+    G --> I[Send Push Campaign]
+    H --> J[Track: campaign_sent]
+    I --> J
+    J --> K[Mark Campaign as Sent]
+    K --> L[End]
+```
+
+**Nodes sử dụng**:
+
+- `Schedule Trigger` (Cron 10:00 AM daily)
+- `HTTP Request` (GET scheduled campaigns, GET segment users, POST notifications, POST track events)
+- `Split In Batches` (loop qua campaigns và users)
+- Email & Push notification
+- Event tracking
+
+**Konfigurasi Campaign**:
+
+```json
+{
+  "campaign_id": "summer_sale_2026",
+  "campaign_name": "Summer Mega Sale",
+  "segment_id": "heavy_users",
+  "segment_name": "Heavy Users",
+  "promo_code": "SUMMER50",
+  "discount_percentage": 50,
+  "discount_value": 500000,
+  "min_order_value": 200000,
+  "end_date": "2026-06-30",
+  "email_subject": "🎉 Khuyến mãi hè siêu hạ giá!",
+  "push_title": "🎉 Special Offer!",
+  "push_message": "Giảm 50% cho đơn hôm nay",
+  "deep_link": "/deals"
+}
+```
+
+**Segment Examples**:
+
+- `new_users`: Người dùng 7 ngày tuần trước
+- `frequent_buyers`: Tổng cộng 5+ đơn
+- `high_ltv`: Doanh thu > 5M
+- `inactive`: Chưa mua trong 21 ngày
+- `cart_abandoners`: Bỏ checkout > 2 lần
 
 ---
 
@@ -454,20 +613,20 @@ MIXPANEL_TOKEN=xxx
 
 ### Internal API Endpoints (cần implement)
 
-| Endpoint | Method | Mô tả |
-|----------|--------|-------|
-| `/internal/journeys/users/:id/first-order-status` | GET | Kiểm tra đơn đầu tiên |
-| `/internal/journeys/checkouts/:id/status` | GET | Trạng thái checkout |
-| `/internal/journeys/orders/:id/review-status` | GET | Trạng thái review |
-| `/internal/journeys/users/:id/reorder-status` | GET | Trạng thái reorder |
-| `/internal/notifications/push` | POST | Gửi push notification |
-| `/internal/notifications/in-app` | POST | Lưu in-app notification |
-| `/internal/marketing/issue-voucher` | POST | Phát voucher |
-| `/internal/events/track` | POST | Track analytics event |
-| `/internal/orders/active-deliveries` | GET | Đơn đang giao |
-| `/internal/merchants/active-list` | GET | Danh sách merchant |
-| `/internal/merchants/:id/daily-stats` | GET | Stats ngày hôm qua |
-| `/internal/users/lapsed` | GET | Users không hoạt động |
+| Endpoint                                          | Method | Mô tả                   |
+| ------------------------------------------------- | ------ | ----------------------- |
+| `/internal/journeys/users/:id/first-order-status` | GET    | Kiểm tra đơn đầu tiên   |
+| `/internal/journeys/checkouts/:id/status`         | GET    | Trạng thái checkout     |
+| `/internal/journeys/orders/:id/review-status`     | GET    | Trạng thái review       |
+| `/internal/journeys/users/:id/reorder-status`     | GET    | Trạng thái reorder      |
+| `/internal/notifications/push`                    | POST   | Gửi push notification   |
+| `/internal/notifications/in-app`                  | POST   | Lưu in-app notification |
+| `/internal/marketing/issue-voucher`               | POST   | Phát voucher            |
+| `/internal/events/track`                          | POST   | Track analytics event   |
+| `/internal/orders/active-deliveries`              | GET    | Đơn đang giao           |
+| `/internal/merchants/active-list`                 | GET    | Danh sách merchant      |
+| `/internal/merchants/:id/daily-stats`             | GET    | Stats ngày hôm qua      |
+| `/internal/users/lapsed`                          | GET    | Users không hoạt động   |
 
 ---
 
