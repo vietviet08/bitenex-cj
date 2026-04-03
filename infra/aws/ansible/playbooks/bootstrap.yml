@@ -9,6 +9,7 @@
       jenkins_apt_keyring_path: "/etc/apt/keyrings/jenkins-keyring.asc"
       jenkins_apt_repo: "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
       compose_cmd: "docker compose -f {{ bitenex_compose_file }}"
+      compose_pull_services: "redis n8n pgadmin sonarqube-db sonarqube"
       nginx_tls_domains: "{{ [nginx_api_server_name, nginx_n8n_server_name, nginx_pgadmin_server_name, nginx_jenkins_server_name, nginx_sonarqube_server_name] | reject('equalto', '') | unique | list }}"
 
   tasks:
@@ -326,7 +327,7 @@
 
       - name: Pull docker images for stack
         ansible.builtin.command:
-            cmd: "{{ compose_cmd }} pull"
+            cmd: "{{ compose_cmd }} pull {{ compose_pull_services }}"
             chdir: "{{ bitenex_compose_dir }}"
 
       - name: Deploy docker compose stack
