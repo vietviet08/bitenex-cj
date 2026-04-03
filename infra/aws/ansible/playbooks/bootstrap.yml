@@ -297,6 +297,14 @@
             executable: /bin/bash
         changed_when: false
 
+      - name: Copy Firebase Admin SDK credentials
+        ansible.builtin.copy:
+            src: "{{ playbook_dir }}/../../../../../bitenex-api/bitenex-89b3e-firebase-adminsdk-fbsvc-34dbe96019.json"
+            dest: "{{ bitenex_compose_dir }}/bitenex-api/bitenex-89b3e-firebase-adminsdk-fbsvc-34dbe96019.json"
+            owner: ubuntu
+            group: bitenex
+            mode: "0640"
+
       - name: Render API environment file
         ansible.builtin.template:
             src: "{{ playbook_dir }}/../templates/bitenex.env.j2"
