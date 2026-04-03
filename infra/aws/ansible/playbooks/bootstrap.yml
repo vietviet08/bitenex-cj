@@ -9,6 +9,7 @@
       jenkins_apt_keyring_path: "/etc/apt/keyrings/jenkins-keyring.asc"
       jenkins_apt_repo: "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
       compose_cmd: "docker compose -f {{ bitenex_compose_file }}"
+      compose_pull_services: "redis n8n pgadmin sonarqube-db sonarqube"
       nginx_tls_domains: "{{ [nginx_api_server_name, nginx_n8n_server_name, nginx_pgadmin_server_name, nginx_jenkins_server_name, nginx_sonarqube_server_name] | reject('equalto', '') | unique | list }}"
 
   tasks:
@@ -152,6 +153,17 @@
             groups: docker
             append: true
 
+      - name: Create shared deployment group
+        ansible.builtin.group:
+            name: bitenex
+            state: present
+
+      - name: Add ubuntu user to shared deployment group
+        ansible.builtin.user:
+            name: ubuntu
+            groups: bitenex
+            append: true
+
       - name: Add Jenkins apt key
         ansible.builtin.get_url:
             url: "{{ jenkins_apt_key_url }}"
@@ -191,19 +203,26 @@
             append: true
         register: jenkins_docker_group
 
+      - name: Add Jenkins user to shared deployment group
+        ansible.builtin.user:
+            name: jenkins
+            groups: bitenex
+            append: true
+        register: jenkins_shared_group
+
       - name: Restart Jenkins to apply AWS env and docker group changes
         ansible.builtin.service:
             name: jenkins
             state: restarted
-        when: jenkins_docker_group.changed
+        when: jenkins_docker_group.changed or jenkins_shared_group.changed
 
       - name: Create deployment base directory
         ansible.builtin.file:
             path: /opt/bitenex
             state: directory
             owner: ubuntu
-            group: ubuntu
-            mode: "0755"
+            group: bitenex
+            mode: "2775"
 
       - name: Create ACME challenge webroot
         ansible.builtin.file:
@@ -221,36 +240,70 @@
             force: true
         become_user: ubuntu
 
+      - name: Configure shared git repository permissions
+        ansible.builtin.command:
+            argv:
+                - git
+                - -C
+                - /opt/bitenex/repo
+                - config
+                - core.sharedRepository
+                - group
+        changed_when: false
+
+      - name: Ensure deployment repository ownership matches shared group
+        ansible.builtin.file:
+            path: /opt/bitenex/repo
+            state: directory
+            owner: ubuntu
+            group: bitenex
+            recurse: true
+
+      - name: Ensure deployment repository is group writable
+        ansible.builtin.command:
+            argv:
+                - chmod
+                - -R
+                - g+rwX
+                - /opt/bitenex/repo
+        changed_when: false
+
+      - name: Ensure deployment directories keep shared group
+        ansible.builtin.shell: find /opt/bitenex -type d -exec chmod g+s {} +
+        args:
+            executable: /bin/bash
+        changed_when: false
+
       - name: Render API environment file
         ansible.builtin.template:
             src: "{{ playbook_dir }}/../templates/bitenex.env.j2"
             dest: "{{ bitenex_compose_dir }}/.env"
             owner: ubuntu
-            group: ubuntu
-            mode: "0600"
+            group: bitenex
+            mode: "0640"
 
       - name: Render Docker services environment file
         ansible.builtin.template:
             src: "{{ playbook_dir }}/../templates/bitenex.env.docker.j2"
             dest: "{{ bitenex_compose_dir }}/.env.docker"
             owner: ubuntu
-            group: ubuntu
-            mode: "0600"
+            group: bitenex
+            mode: "0640"
 
       - name: Create pgAdmin config directory
         ansible.builtin.file:
             path: "{{ bitenex_compose_dir }}/deploy/pgadmin"
             state: directory
             owner: ubuntu
-            group: ubuntu
-            mode: "0750"
+            group: bitenex
+            mode: "2770"
 
       - name: Render pgAdmin server definitions
         ansible.builtin.template:
             src: "{{ playbook_dir }}/../templates/pgadmin-servers.json.j2"
             dest: "{{ bitenex_compose_dir }}/deploy/pgadmin/servers.json"
             owner: ubuntu
-            group: ubuntu
+            group: bitenex
             mode: "0640"
 
       - name: Render pgAdmin passfile
@@ -258,8 +311,8 @@
             src: "{{ playbook_dir }}/../templates/pgadmin-pgpassfile.j2"
             dest: "{{ bitenex_compose_dir }}/deploy/pgadmin/pgpassfile"
             owner: ubuntu
-            group: ubuntu
-            mode: "0600"
+            group: bitenex
+            mode: "0640"
 
       - name: Render bootstrap Nginx reverse proxy config
         ansible.builtin.template:
@@ -326,7 +379,7 @@
 
       - name: Pull docker images for stack
         ansible.builtin.command:
-            cmd: "{{ compose_cmd }} pull"
+            cmd: "{{ compose_cmd }} pull {{ compose_pull_services }}"
             chdir: "{{ bitenex_compose_dir }}"
 
       - name: Deploy docker compose stack
