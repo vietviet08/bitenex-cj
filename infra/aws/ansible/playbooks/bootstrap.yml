@@ -64,9 +64,32 @@
                 - net-tools
                 - nginx
                 - certbot
+                - unzip
                 - openjdk-17-jdk
                 - python3-certbot-nginx
             state: present
+
+      - name: Download AWS CLI v2 bundle
+        ansible.builtin.get_url:
+            url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+            dest: /tmp/awscliv2.zip
+            mode: "0644"
+
+      - name: Extract AWS CLI v2 bundle
+        ansible.builtin.unarchive:
+            src: /tmp/awscliv2.zip
+            dest: /tmp
+            remote_src: true
+
+      - name: Install AWS CLI v2
+        ansible.builtin.command:
+            cmd: /tmp/aws/install --update
+        changed_when: false
+
+      - name: Verify AWS CLI is available
+        ansible.builtin.command:
+            cmd: aws --version
+        changed_when: false
 
       - name: Configure sysctl for container workloads
         ansible.builtin.copy:
@@ -147,6 +170,14 @@
             state: present
             update_cache: true
 
+      - name: Create Jenkins systemd override directory
+        ansible.builtin.file:
+            path: /etc/systemd/system/jenkins.service.d
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+
       - name: Ensure Jenkins service is running
         ansible.builtin.service:
             name: jenkins
@@ -158,6 +189,13 @@
             name: jenkins
             groups: docker
             append: true
+        register: jenkins_docker_group
+
+      - name: Restart Jenkins to apply AWS env and docker group changes
+        ansible.builtin.service:
+            name: jenkins
+            state: restarted
+        when: jenkins_docker_group.changed
 
       - name: Create deployment base directory
         ansible.builtin.file:

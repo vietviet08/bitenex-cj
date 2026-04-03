@@ -1,6 +1,7 @@
 ansible_user: ubuntu
 
 n8n_version: "latest"
+aws_region: "ap-southeast-1"
 
 bitenex_repo_url: "https://github.com/vietviet08/bitenex-api.git"
 bitenex_repo_version: "develop"

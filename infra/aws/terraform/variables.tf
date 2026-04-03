@@ -98,3 +98,9 @@ variable "admin_cloudfront_price_class" {
   description = "CloudFront price class for bitenex-admin."
   default     = "PriceClass_200"
 }
+
+variable "ecr_api_repository_name" {
+  type        = string
+  description = "ECR repository name for bitenex-api images."
+  default     = "bitenex-api"
+}
