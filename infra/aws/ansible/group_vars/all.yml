@@ -64,7 +64,7 @@ pgadmin_enhanced_cookie_protection: true
 bitenex_timezone: "Asia/Ho_Chi_Minh"
 
 bitenex_firebase_project_id: ""
-bitenex_firebase_credentials_path: ""
+bitenex_firebase_credentials_path: "/app/firebase-credentials.json"
 bitenex_firebase_credentials_json: ""
 
 bitenex_smtp_host: "smtp.gmail.com"
