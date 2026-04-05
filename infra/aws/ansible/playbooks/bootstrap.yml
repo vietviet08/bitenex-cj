@@ -297,10 +297,29 @@
             executable: /bin/bash
         changed_when: false
 
+      - name: Ensure accidental docker volume directory is removed
+        ansible.builtin.file:
+            path: "{{ bitenex_compose_dir }}/bitenex-89b3e-firebase-adminsdk-fbsvc-34dbe96019.json"
+            state: absent
+
+      - name: Check local Firebase Admin SDK credentials exists on controller
+        ansible.builtin.stat:
+            path: "{{ playbook_dir }}/../../../../../bitenex-api/bitenex-89b3e-firebase-adminsdk-fbsvc-34dbe96019.json"
+        delegate_to: localhost
+        become: false
+        register: firebase_admin_sdk_file
+
+      - name: Assert local Firebase Admin SDK credentials is available
+        ansible.builtin.assert:
+            that:
+                - firebase_admin_sdk_file.stat.exists
+                - firebase_admin_sdk_file.stat.isreg
+            fail_msg: "Missing Firebase Admin SDK file at bitenex-api/bitenex-89b3e-firebase-adminsdk-fbsvc-34dbe96019.json on the Ansible controller."
+
       - name: Copy Firebase Admin SDK credentials
         ansible.builtin.copy:
             src: "{{ playbook_dir }}/../../../../../bitenex-api/bitenex-89b3e-firebase-adminsdk-fbsvc-34dbe96019.json"
-            dest: "{{ bitenex_compose_dir }}/bitenex-api/bitenex-89b3e-firebase-adminsdk-fbsvc-34dbe96019.json"
+            dest: "{{ bitenex_compose_dir }}/bitenex-89b3e-firebase-adminsdk-fbsvc-34dbe96019.json"
             owner: ubuntu
             group: bitenex
             mode: "0640"
