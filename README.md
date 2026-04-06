@@ -1,264 +1,187 @@
-# Customer Journey Tracking & Automation Platform (MVP)
+# Customer Journey Infrastructure & n8n Workflows
 
-A lightweight platform to capture user events, resolve identities, analyze journeys (timeline, funnel, retention), and trigger automations (abandoned cart, onboarding, churn warning). Built around a Web Tracking SDK, a FastAPI Event Collector, Postgres + ClickHouse storage, n8n workflows, and a Next.js dashboard.
+Infrastructure and automation workspace for the Bitenex customer journey platform.
 
-## Quick Start (5 minutes)
+This repository is primarily organized around:
 
-```
-# 1) Create env files from the snippets in the Environment Variables section
+- infrastructure definitions in `infra/`
+- automation workflows and operating docs in `docs/n8n/`
 
-# 2) Start infra
-Docker compose -f infra/docker-compose/docker-compose.yml up -d
+It should be read as an operations and deployment repository, not as an application README.
 
-# 3) Run Postgres migrations
-cd apps/api
-alembic upgrade head
+## Overview
 
-# 4) Start API
-uvicorn app.main:app --reload --port 8000
+<p align="center">
+  <img src="./assets/architecture.png" alt="Customer Journey Architecture" width="100%" />
+</p>
 
-# 5) Start Web (new terminal)
-cd ../web
-pnpm install
-pnpm dev
+The platform is split into four practical layers:
 
-# 6) Send a test event (new terminal)
-curl -X POST http://localhost:8000/v1/events \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: test-evt-0001" \
-  -d '{"event_id":"b7f9dd2d-3a9c-4e7d-9f18-2e8f8c5f7e6a","event_name":"add_to_cart","timestamp":"2026-01-29T14:05:12Z","anonymous_id":"anon_8a9d8f4f","user_id":"f9c6e2b0-2a28-4d54-95a1-2d7e8e2d3a10","session_id":"sess_001","context":{"user_agent":"Mozilla/5.0","page_url":"https://shop.example.com/product/sku-123","referrer":"https://google.com","locale":"en-US","tz":"UTC+07:00"},"properties":{"sku":"sku-123","price":29.99,"currency":"USD","quantity":1}}'
-```
+- **Access layer**: end users, admins, and public entry points.
+- **Application host layer**: an EC2-based Docker Compose host running operational services such as Nginx, n8n, Redis, pgAdmin, and SonarQube.
+- **Data layer**: persistent services isolated in private subnets, centered around RDS.
+- **Delivery layer**: Terraform and Ansible for infrastructure lifecycle, with GitHub, Jenkins, ECR, S3, and CloudFront handling CI/CD and frontend delivery.
 
-## Architecture
+## Repository Layout
 
-```mermaid
-graph LR
-  subgraph Client
-    SDK[Web Tracking SDK]
-  end
-
-  subgraph Ingestion
-    API[FastAPI Event Collector]
-    Redis[(Redis Streams)]
-  end
-
-  subgraph Storage
-    PG[(Postgres)]
-    CH[(ClickHouse)]
-  end
-
-  subgraph Automation
-    N8N[n8n Workflows]
-  end
-
-  subgraph UI
-    Web[Next.js Dashboard]
-  end
-
-  SDK -->|HTTP /v1/events| API
-  SDK -->|HTTP /v1/identify| API
-  API -->|Validate + Enrich| Redis
-  API -->|Profiles + Identity| PG
-  Redis -->|Ingest Events| CH
-  CH -->|Analytics Queries| Web
-  PG -->|Profiles + Segments| Web
-  API -->|Webhook Triggers| N8N
-  N8N -->|Email/SMS/API| Ext[External Services]
+```text
+customer-journey/
+├── assets/architecture.png
+├── docs/n8n/
+├── docs/phase-1/
+├── infra/aws/
+└── infra/docker-compose/
 ```
 
-## Folder Structure
+## What This Repository Covers
 
-```
-apps/
-  api/                # FastAPI service
-  web/                # Next.js dashboard
-packages/
-  sdk-web/            # Web Tracking SDK
-infra/
-  docker-compose/     # MVP docker-compose stack
-openspec/             # Specs and project conventions
-docs/                 # Docs and sample workflows
-```
+### Infrastructure
 
-## Prerequisites
+- Local and development service orchestration with Docker Compose
+- AWS provisioning with Terraform
+- Host bootstrap and deployment automation with Ansible
+- Supporting operational services such as n8n, Redis, PostgreSQL, ClickHouse, pgAdmin, and SonarQube
 
-- Docker + Docker Compose
-- Python 3.11+
-- Node.js 18+ (pnpm recommended)
-- Redis CLI (optional for debugging)
+### Automation
 
-## Environment Variables
+- Importable n8n workflow JSON files
+- Workflow documentation with triggers, intent, and execution flow
+- A reusable baseline for lifecycle messaging, recovery flows, SLA monitoring, and merchant reporting
 
-Create env files based on the examples below.
+## Infrastructure
 
-### `apps/api/.env`
+### Local Stack
 
-```
-API_PORT=8000
-JWT_SECRET=change-me
-POSTGRES_DSN=postgresql+psycopg://app:app@localhost:5432/cj
-CLICKHOUSE_DSN=clickhouse://default:@localhost:8123/cj
-REDIS_URL=redis://localhost:6379/0
-RATE_LIMIT_PER_MIN=120
-EVENT_RETENTION_DAYS=90
+The local stack is defined in [`infra/docker-compose/docker-compose.yml`](./infra/docker-compose/docker-compose.yml).
+
+Included services:
+
+- `redis`
+- `postgres`
+- `clickhouse` via the `optional` profile
+- `n8n`
+- `burndown-render`
+
+Start the stack:
+
+```bash
+docker compose -f infra/docker-compose/docker-compose.yml up -d
 ```
 
-### `apps/web/.env.local`
+Common ports:
 
-```
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-NEXT_PUBLIC_AUTH_PROVIDER=jwt
-```
+- `5678` for n8n
+- `5432` for PostgreSQL
+- `6379` for Redis
+- `8123` and `9000` for ClickHouse
+- `8088` for burndown-render
 
-### `packages/sdk-web/.env`
+Example environment values:
 
-```
-SDK_API_BASE_URL=http://localhost:8000
-SDK_WRITE_KEY=dev-write-key
-```
-
-### `infra/docker-compose/.env`
-
-```
+```bash
 POSTGRES_DB=cj
 POSTGRES_USER=app
 POSTGRES_PASSWORD=app
 CLICKHOUSE_DB=cj
 CLICKHOUSE_USER=default
 CLICKHOUSE_PASSWORD=
-REDIS_PASSWORD=
+N8N_BASIC_AUTH_ACTIVE=true
 N8N_BASIC_AUTH_USER=admin
 N8N_BASIC_AUTH_PASSWORD=admin
+N8N_HOST=localhost
+N8N_PROTOCOL=http
 N8N_WEBHOOK_URL=http://localhost:5678
+N8N_TIMEZONE=Asia/Ho_Chi_Minh
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+BITENEX_API_BASE_URL=https://api.bitenex.vn
+BITENEX_INTERNAL_API_KEY=change-me
 ```
 
-## Local Development (Docker Compose)
+### AWS Blueprint
 
-From the repo root:
+The AWS deployment blueprint lives in [`infra/aws/`](./infra/aws/).
 
-```
-Docker compose -f infra/docker-compose/docker-compose.yml up -d
-```
+Core design:
 
-Then:
+- VPC in `ap-southeast-1`
+- public subnets for the application container host
+- private subnets for the data tier
+- EC2 host for Docker Compose workloads
+- Nginx as the public reverse proxy
+- RDS as the managed database layer
+- S3 and CloudFront for admin frontend delivery
+- GitHub, Jenkins, and Amazon ECR for CI/CD
 
-```
-# Postgres migrations
-cd apps/api
-alembic upgrade head
+Terraform quick start:
 
-# API
-uvicorn app.main:app --reload --port 8000
-
-# Web
-cd ../web
-pnpm install
-pnpm dev
-
-# SDK (optional local build)
-cd ../../packages/sdk-web
-pnpm install
-pnpm build
+```bash
+cd infra/aws/terraform
+cp terraform.tfvars.example terraform.tfvars
+terraform init
+terraform plan
+terraform apply
 ```
 
-n8n is included in the Compose stack and runs at `http://localhost:5678`.
+Ansible bootstrap:
 
-## ClickHouse Initialization
-
-ClickHouse tables are created via init SQL scripts mounted by Docker Compose or by a dedicated setup step in the API. Alembic only manages Postgres schemas. Ensure ClickHouse tables exist before sending high-volume events.
-
-## Running Services
-
-- API: `http://localhost:8000`
-- Web Dashboard: `http://localhost:3000`
-- n8n: `http://localhost:5678`
-
-## API Endpoints (MVP)
-
-- `POST /v1/events` - Ingest single or batch events (requires `Idempotency-Key` header)
-- `POST /v1/identify` - Link identity attributes to `anonymous_id`
-- `GET /v1/users/{id}/timeline` - User journey timeline
-- `GET /v1/funnels?from=2026-01-01&to=2026-01-31&steps=page_view,add_to_cart,purchase_success` - Funnel analytics
-- `POST /v1/segments/preview` - Segment membership preview
-
-## Sample Event Payload
-
-Event names use snake_case, for example: `page_view`, `sign_up`, `add_to_cart`, `begin_checkout`, `purchase_success`.
-
-```json
-{
-  "event_id": "f2a1c7c0-9f2c-4c62-9c4a-5a4f9b6d9e7b",
-  "event_name": "add_to_cart",
-  "timestamp": "2026-01-29T14:05:12Z",
-  "anonymous_id": "anon_8a9d8f4f",
-  "user_id": "f9c6e2b0-2a28-4d54-95a1-2d7e8e2d3a10",
-  "session_id": "sess_001",
-  "context": {
-    "user_agent": "Mozilla/5.0",
-    "page_url": "https://shop.example.com/product/sku-123",
-    "referrer": "https://google.com",
-    "locale": "en-US",
-    "tz": "UTC+07:00"
-  },
-  "properties": {
-    "sku": "sku-123",
-    "price": 29.99,
-    "currency": "USD",
-    "quantity": 1
-  }
-}
+```bash
+cd infra/aws/ansible
+ansible-playbook -i inventory/aws_ec2.yml playbooks/bootstrap.yml
 ```
 
-Note: IP is derived server-side from request headers, not sent by the SDK.
+For deployment details, see [`infra/aws/README.md`](./infra/aws/README.md).
 
-## Identity Resolution (How it Works)
+## n8n Workflows
 
-- Every event must include `anonymous_id`.
-- `POST /v1/identify` links `anonymous_id` to `user_id`, email, phone, and/or device_id.
-- When a match occurs, profiles are merged in Postgres and future events map to the resolved identity.
-- Timeline and analytics queries use the resolved user identity for consistent journeys.
+The workflow library is stored in [`docs/n8n/`](./docs/n8n/).
 
-## End-to-End Test (curl)
+Primary references:
 
+- [`docs/n8n/README.md`](./docs/n8n/README.md) for import and environment setup
+- [`docs/n8n/WORKFLOWS.md`](./docs/n8n/WORKFLOWS.md) for detailed workflow behavior and diagrams
+
+Included workflow set:
+
+| Workflow | File | Trigger | Purpose |
+|---|---|---|---|
+| WF-01 | `WF-01-onboarding-first-order.json` | `user.registered` | Convert new users to a first order |
+| WF-02 | `WF-02-abandoned-checkout-recovery.json` | `checkout.abandoned` | Recover abandoned checkout sessions |
+| WF-03 | `WF-03-order-lifecycle-orchestration.json` | `order.status_changed` | Orchestrate order lifecycle notifications |
+| WF-04 | `WF-04-delivered-review-reorder.json` | `order.delivered` | Request reviews and drive reorder behavior |
+| WF-05 | `WF-05-driver-sla-monitor.json` | `*/5 * * * *` | Monitor driver SLA and delivery delays |
+| WF-06 | `WF-06-payment-failure-recovery.json` | `payment.failed` | Recover failed payment flows |
+| WF-07 | `WF-07-merchant-daily-analytics.json` | `0 8 * * *` | Send daily merchant analytics digests |
+| WF-08 | `WF-08-winback-lapsed-users.json` | `0 10 * * *` | Re-engage inactive users |
+
+### Importing Workflows into n8n
+
+1. Start the local stack so n8n is available.
+2. Open `http://localhost:5678`.
+3. Import any JSON file from `docs/n8n/`.
+4. Configure credentials and environment variables.
+5. Validate the intended logic against `WORKFLOWS.md` before enabling production usage.
+
+Common workflow environment variables:
+
+```bash
+BITENEX_API_BASE_URL=https://api.bitenex.vn
+BITENEX_INTERNAL_API_KEY=your-internal-key
+BITENEX_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASS=SG.xxxxx
 ```
-curl -X POST http://localhost:8000/v1/events \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: test-evt-0002" \
-  -d '{"event_id":"2efcab1c-1f7f-4b87-a6b3-1e7e8f2b0b5a","event_name":"page_view","timestamp":"2026-01-29T14:06:12Z","anonymous_id":"anon_8a9d8f4f","context":{"user_agent":"Mozilla/5.0","page_url":"https://shop.example.com/","referrer":"https://google.com","locale":"en-US","tz":"UTC+07:00"},"properties":{"path":"/"}}'
-```
 
-## n8n Workflows (Sample)
+## Recommended Reading Order
 
-Recommended location for workflow JSONs: `docs/n8n/`.
+1. [`assets/architecture.png`](./assets/architecture.png)
+2. [`infra/aws/README.md`](./infra/aws/README.md)
+3. [`infra/docker-compose/docker-compose.yml`](./infra/docker-compose/docker-compose.yml)
+4. [`docs/n8n/README.md`](./docs/n8n/README.md)
+5. [`docs/n8n/WORKFLOWS.md`](./docs/n8n/WORKFLOWS.md)
 
-Import and run:
+## Notes
 
-1. Open n8n at `http://localhost:5678`
-2. Click Import -> upload a JSON workflow from `docs/n8n/`
-3. Configure credentials (SMTP, Twilio, internal API keys)
-4. Enable workflow and trigger with webhook or cron
-
-Common samples:
-
-- Onboarding to first order (webhook -> first-order check -> welcome nudge -> voucher)
-- Abandoned checkout recovery (webhook -> delay -> recovery reminder -> offer)
-- Delivered to review and reorder (delivered event -> review request -> reorder offer)
-- Abandoned cart reminder (generic sample)
-- Onboarding sequence (generic sample)
-- Churn warning (segment preview -> CRM update)
-
-## Troubleshooting
-
-- Events not appearing: check Redis Streams length and ClickHouse connectivity; verify `Idempotency-Key`.
-- 401 Unauthorized: ensure JWT secret and token issuer are aligned across API and web.
-- No timeline data: confirm identity resolution and that `anonymous_id` is present.
-- n8n webhooks fail: verify `N8N_WEBHOOK_URL` and exposed ports.
-- ClickHouse errors: confirm database and table creation during initialization.
-
-## Deployment Notes (MVP)
-
-- Use Docker Compose for a single-node deployment.
-- Back up Postgres (profiles, segments, workflows) and ClickHouse (events).
-- Configure retention via `EVENT_RETENTION_DAYS` and periodic cleanup jobs.
-- Put the API and n8n behind a reverse proxy with TLS in production.
-- Scale ingest by adding more API workers and Redis Streams consumers.
+- This README intentionally focuses on infrastructure and automation.
+- For earlier product and domain context, see [`docs/phase-1/`](./docs/phase-1/).
