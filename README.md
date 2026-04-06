@@ -27,6 +27,7 @@ The platform is split into four practical layers:
 ```text
 customer-journey/
 ├── assets/architecture.png
+├── assets/workflow.png
 ├── docs/n8n/
 ├── docs/phase-1/
 ├── infra/aws/
@@ -135,6 +136,10 @@ For deployment details, see [`infra/aws/README.md`](./infra/aws/README.md).
 
 The workflow library is stored in [`docs/n8n/`](./docs/n8n/).
 
+<p align="center">
+  <img src="./assets/workflow.png" alt="n8n Workflow Overview" width="100%" />
+</p>
+
 Primary references:
 
 - [`docs/n8n/README.md`](./docs/n8n/README.md) for import and environment setup
@@ -176,10 +181,11 @@ SMTP_PASS=SG.xxxxx
 ## Recommended Reading Order
 
 1. [`assets/architecture.png`](./assets/architecture.png)
-2. [`infra/aws/README.md`](./infra/aws/README.md)
-3. [`infra/docker-compose/docker-compose.yml`](./infra/docker-compose/docker-compose.yml)
-4. [`docs/n8n/README.md`](./docs/n8n/README.md)
-5. [`docs/n8n/WORKFLOWS.md`](./docs/n8n/WORKFLOWS.md)
+2. [`assets/workflow.png`](./assets/workflow.png)
+3. [`infra/aws/README.md`](./infra/aws/README.md)
+4. [`infra/docker-compose/docker-compose.yml`](./infra/docker-compose/docker-compose.yml)
+5. [`docs/n8n/README.md`](./docs/n8n/README.md)
+6. [`docs/n8n/WORKFLOWS.md`](./docs/n8n/WORKFLOWS.md)
 
 ## Notes
 
