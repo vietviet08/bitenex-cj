@@ -11,19 +11,17 @@ This folder provides a practical baseline to deploy `bitenex-api` stack on AWS w
 - Networking
 - VPC across 2 AZs
 - 2 public subnets
-- 1 Ubuntu EC2 host in public subnet for Docker Compose workloads
+- 1 Ubuntu EC2 `t3.medium` host in public subnet for Docker Compose workloads
 
 - Docker Compose stack on host
 - `api` (FastAPI)
 - `redis`
 - `n8n`
-- `sonarqube`
-- `sonarqube-db` (local Postgres only for SonarQube)
+- `pgadmin`
 - `nginx` on the host as the public reverse proxy
 
 - Data layer
 - RDS PostgreSQL (private subnet, used by `api`)
-- Local Postgres container in Docker network only for `sonarqube`
 
 - Static frontend
 - Private S3 bucket for `bitenex-admin` static assets
@@ -34,7 +32,7 @@ This folder provides a practical baseline to deploy `bitenex-api` stack on AWS w
 - Docker Engine + Docker Compose plugin
 - Jenkins
 - Git
-- Java 17 (OpenJDK)
+- Java 21 (OpenJDK, for Jenkins)
 - net-tools
 
 - Traffic and access
@@ -64,7 +62,7 @@ If you use a custom domain for `bitenex-admin` and DNS is not managed by Route53
 3. Wait until the ACM certificate in `us-east-1` is `Issued`.
 4. Set `admin_cloudfront_certificate_arn` in `terraform.tfvars` to the value from `admin_frontend_certificate_arn`.
 5. Run `terraform apply` again.
-6. Create a DNS `CNAME` for `admin.catcosy.shop` pointing to `admin_cloudfront_domain_name`.
+6. Create a DNS `CNAME` for `admin.vietnq.online` pointing to `admin_cloudfront_domain_name`.
 
 ## Ansible Quick Start
 
@@ -72,7 +70,8 @@ If you use a custom domain for `bitenex-admin` and DNS is not managed by Route53
 2. Update `ansible/group_vars/all.yml` with your repository URL/branch, domains, and RDS endpoint from Terraform output (`rds_postgres_endpoint`).
 3. Create `ansible/vault.yml` from `ansible/vault.yml.example` and encrypt it with `ansible-vault encrypt ansible/vault.yml`.
 4. Ansible will render `.env` and `.env.docker` into `bitenex-api` on the server from those vars.
-5. Run Ansible using dynamic inventory plugin:
+5. AI provider settings are not rendered from env. Configure API key, base URL, and model in the admin dashboard after deploy.
+6. Run Ansible using dynamic inventory plugin:
 
 ```bash
 cd infra/aws/ansible

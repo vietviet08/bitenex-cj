@@ -31,23 +31,23 @@ bitenex_jwt_algorithm: "HS256"
 bitenex_access_token_expire_minutes: 30
 bitenex_refresh_token_expire_days: 7
 bitenex_cors_origins:
-    - "https://catcosy.shop"
-    - "https://www.catcosy.shop"
-    - "https://api.catcosy.shop"
-    - "https://admin.catcosy.shop"
+    - "https://vietnq.online"
+    - "https://www.vietnq.online"
+    - "https://api.vietnq.online"
+    - "https://admin.vietnq.online"
     - "http://localhost:3000"
     - "http://localhost:8080"
 bitenex_ws_message_queue_size: 100
 
 bitenex_vnp_url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
 bitenex_vnp_return_url: "bitenexuser://payment/result"
-bitenex_vnp_ipn_url: "https://api.catcosy.shop/api/v1/payments/webhook/vnpay"
+bitenex_vnp_ipn_url: "https://api.vietnq.online/api/v1/payments/webhook/vnpay"
 
 bitenex_n8n_base_url: "http://n8n:5678"
 bitenex_n8n_port: 5678
 bitenex_n8n_bind_address: "127.0.0.1"
 bitenex_n8n_protocol: "https"
-bitenex_n8n_public_url: "https://n8n.catcosy.shop"
+bitenex_n8n_public_url: "https://n8n.vietnq.online"
 bitenex_n8n_webhook_enabled: true
 bitenex_n8n_basic_auth_active: true
 bitenex_n8n_basic_auth_user: "admin"
@@ -58,7 +58,7 @@ bitenex_n8n_block_env_access_in_node: false
 pgadmin_bind_address: "127.0.0.1"
 pgadmin_port: 5050
 pgadmin_default_email: "viezquoc.dev@gmail.com"
-pgadmin_public_url: "https://pgadmin.catcosy.shop"
+pgadmin_public_url: "https://pgadmin.vietnq.online"
 pgadmin_enhanced_cookie_protection: true
 
 bitenex_timezone: "Asia/Ho_Chi_Minh"
@@ -71,18 +71,8 @@ bitenex_smtp_host: "smtp.gmail.com"
 bitenex_smtp_port: 465
 bitenex_smtp_tls_ssl: true
 
-sonarqube_image: "sonarqube:lts-community"
-sonarqube_bind_address: "127.0.0.1"
-sonarqube_port: 9000
-sonarqube_postgres_db: "sonarqube"
-sonarqube_postgres_user: "sonarqube"
-sonarqube_public_url: "https://sonarqube.catcosy.shop"
-sonarqube_web_java_opts: "-Xms512m -Xmx512m"
-sonarqube_ce_java_opts: "-Xms512m -Xmx512m"
-
 jenkins_port: 8080
-nginx_api_server_name: "api.catcosy.shop"
-nginx_n8n_server_name: "n8n.catcosy.shop"
-nginx_pgadmin_server_name: "pgadmin.catcosy.shop"
-nginx_jenkins_server_name: "jenkins.catcosy.shop"
-nginx_sonarqube_server_name: "sonarqube.catcosy.shop"
+nginx_api_server_name: "api.vietnq.online"
+nginx_n8n_server_name: "n8n.vietnq.online"
+nginx_pgadmin_server_name: "pgadmin.vietnq.online"
+nginx_jenkins_server_name: "jenkins.vietnq.online"

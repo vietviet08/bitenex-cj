@@ -18,7 +18,7 @@ It should be read as an operations and deployment repository, not as an applicat
 The platform is split into four practical layers:
 
 - **Access layer**: end users, admins, and public entry points.
-- **Application host layer**: an EC2-based Docker Compose host running operational services such as Nginx, n8n, Redis, pgAdmin, and SonarQube.
+- **Application host layer**: an EC2-based Docker Compose host running operational services such as Nginx, n8n, Redis, pgAdmin, and Jenkins.
 - **Data layer**: persistent services isolated in private subnets, centered around RDS.
 - **Delivery layer**: Terraform and Ansible for infrastructure lifecycle, with GitHub, Jenkins, ECR, S3, and CloudFront handling CI/CD and frontend delivery.
 
@@ -41,7 +41,7 @@ customer-journey/
 - Local and development service orchestration with Docker Compose
 - AWS provisioning with Terraform
 - Host bootstrap and deployment automation with Ansible
-- Supporting operational services such as n8n, Redis, PostgreSQL, ClickHouse, pgAdmin, and SonarQube
+- Supporting operational services such as n8n, Redis, PostgreSQL, ClickHouse, pgAdmin, and Jenkins
 
 ### Automation
 

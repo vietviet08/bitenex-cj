@@ -25,7 +25,7 @@ variable "vpc_cidr" {
 variable "instance_type" {
   type        = string
   description = "EC2 instance type for Ubuntu server"
-  default     = "t3.large"
+  default     = "t3.medium"
 }
 
 variable "key_name" {

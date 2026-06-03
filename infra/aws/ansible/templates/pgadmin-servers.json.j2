@@ -9,16 +9,6 @@
       "Username": "{{ bitenex_database_user }}",
       "SSLMode": "{{ bitenex_database_sslmode }}",
       "PassFile": "/pgpassfile"
-    },
-    "2": {
-      "Name": "SonarQube Internal Postgres",
-      "Group": "Bitenex",
-      "Host": "sonarqube-db",
-      "Port": 5432,
-      "MaintenanceDB": "{{ sonarqube_postgres_db }}",
-      "Username": "{{ sonarqube_postgres_user }}",
-      "SSLMode": "prefer",
-      "PassFile": "/pgpassfile"
     }
   }
 }

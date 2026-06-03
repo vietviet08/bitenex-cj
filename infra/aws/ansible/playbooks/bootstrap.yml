@@ -9,8 +9,8 @@
       jenkins_apt_keyring_path: "/etc/apt/keyrings/jenkins-keyring.asc"
       jenkins_apt_repo: "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
       compose_cmd: "docker compose -f {{ bitenex_compose_file }}"
-      compose_pull_services: "redis n8n pgadmin sonarqube-db sonarqube"
-      nginx_tls_domains: "{{ [nginx_api_server_name, nginx_n8n_server_name, nginx_pgadmin_server_name, nginx_jenkins_server_name, nginx_sonarqube_server_name] | reject('equalto', '') | unique | list }}"
+      compose_pull_services: "redis n8n pgadmin"
+      nginx_tls_domains: "{{ [nginx_api_server_name, nginx_n8n_server_name, nginx_pgadmin_server_name, nginx_jenkins_server_name] | reject('equalto', '') | unique | list }}"
 
   tasks:
       - name: Load vaulted deployment secrets
@@ -26,7 +26,6 @@
                 - bitenex_vnp_ipn_url != "https://api.example.com/api/v1/payments/webhook/vnpay"
                 - nginx_pgadmin_server_name != "pgadmin.example.com"
                 - nginx_jenkins_server_name != "jenkins.example.com"
-                - nginx_sonarqube_server_name != "sonarqube.example.com"
                 - letsencrypt_email | length > 3
                 - "'@' in letsencrypt_email"
                 - vault_bitenex_secret_key is defined
@@ -36,7 +35,6 @@
                 - vault_bitenex_n8n_webhook_secret is defined
                 - vault_bitenex_n8n_basic_auth_password is defined
                 - vault_pgadmin_default_password is defined
-                - vault_sonarqube_postgres_password is defined
                 - not vault_bitenex_secret_key.startswith("replace-with-")
                 - not vault_bitenex_jwt_secret_key.startswith("replace-with-")
                 - not vault_bitenex_database_password.startswith("replace-with-")
@@ -44,7 +42,6 @@
                 - not vault_bitenex_n8n_webhook_secret.startswith("replace-with-")
                 - not vault_bitenex_n8n_basic_auth_password.startswith("replace-with-")
                 - not vault_pgadmin_default_password.startswith("replace-with-")
-                - not vault_sonarqube_postgres_password.startswith("replace-with-")
             fail_msg: "Populate group_vars/all.yml and ansible/vault.yml with real deployment values before bootstrap."
 
       - name: Update apt cache
@@ -66,7 +63,7 @@
                 - nginx
                 - certbot
                 - unzip
-                - openjdk-17-jdk
+                - openjdk-21-jdk
                 - python3-certbot-nginx
             state: present
 
@@ -434,7 +431,7 @@
 
       - name: Deploy docker compose stack
         ansible.builtin.command:
-            cmd: "{{ compose_cmd }} up -d --build --force-recreate"
+            cmd: "{{ compose_cmd }} up -d --build --force-recreate --remove-orphans"
             chdir: "{{ bitenex_compose_dir }}"
 
       - name: Wait for API port on loopback
