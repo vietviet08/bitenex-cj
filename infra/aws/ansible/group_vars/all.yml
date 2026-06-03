@@ -71,6 +71,13 @@ bitenex_smtp_host: "smtp.gmail.com"
 bitenex_smtp_port: 465
 bitenex_smtp_tls_ssl: true
 
+bitenex_agora_app_id: "000a8dd603544f6a90fd4a3be288f8b6"
+bitenex_agora_token_ttl_seconds: 3600
+bitenex_call_ring_timeout_seconds: 45
+
+bitenex_aws_region: "ap-southeast-1"
+bitenex_aws_bucket_name: "bitenex-bucket"
+
 jenkins_port: 8080
 nginx_api_server_name: "api.vietnq.online"
 nginx_n8n_server_name: "n8n.vietnq.online"

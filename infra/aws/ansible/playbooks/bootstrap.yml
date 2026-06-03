@@ -34,6 +34,9 @@
                 - vault_bitenex_internal_api_token is defined
                 - vault_bitenex_n8n_webhook_secret is defined
                 - vault_bitenex_n8n_basic_auth_password is defined
+                - vault_bitenex_agora_app_certificate is defined
+                - vault_bitenex_aws_access_key_id is defined
+                - vault_bitenex_aws_secret_access_key is defined
                 - vault_pgadmin_default_password is defined
                 - not vault_bitenex_secret_key.startswith("replace-with-")
                 - not vault_bitenex_jwt_secret_key.startswith("replace-with-")
@@ -41,6 +44,9 @@
                 - not vault_bitenex_internal_api_token.startswith("replace-with-")
                 - not vault_bitenex_n8n_webhook_secret.startswith("replace-with-")
                 - not vault_bitenex_n8n_basic_auth_password.startswith("replace-with-")
+                - not vault_bitenex_agora_app_certificate.startswith("replace-with-")
+                - not vault_bitenex_aws_access_key_id.startswith("replace-with-")
+                - not vault_bitenex_aws_secret_access_key.startswith("replace-with-")
                 - not vault_pgadmin_default_password.startswith("replace-with-")
             fail_msg: "Populate group_vars/all.yml and ansible/vault.yml with real deployment values before bootstrap."
 
@@ -87,6 +93,40 @@
       - name: Verify AWS CLI is available
         ansible.builtin.command:
             cmd: aws --version
+        changed_when: false
+
+      - name: Check if swapfile exists
+        ansible.builtin.stat:
+            path: /swapfile
+        register: swapfile_stat
+
+      - name: Create swapfile
+        ansible.builtin.command: dd if=/dev/zero of=/swapfile bs=1M count=2048
+        when: not swapfile_stat.stat.exists
+        changed_when: true
+
+      - name: Set swapfile permissions
+        ansible.builtin.file:
+            path: /swapfile
+            owner: root
+            group: root
+            mode: "0600"
+
+      - name: Format swapfile
+        ansible.builtin.command: mkswap /swapfile
+        when: not swapfile_stat.stat.exists
+        changed_when: true
+
+      - name: Add swapfile to fstab
+        ansible.builtin.mount:
+            name: none
+            src: /swapfile
+            fstype: swap
+            opts: sw
+            state: present
+
+      - name: Enable swapfile
+        ansible.builtin.command: swapon -a
         changed_when: false
 
       - name: Configure sysctl for container workloads
@@ -259,6 +299,22 @@
             version: "{{ bitenex_repo_version }}"
             force: true
         become_user: ubuntu
+
+      - name: Copy local Dockerfile changes to target host
+        ansible.builtin.copy:
+            src: "{{ playbook_dir }}/../../../../../bitenex-api/Dockerfile"
+            dest: "/opt/bitenex/repo/Dockerfile"
+            owner: ubuntu
+            group: bitenex
+            mode: "0644"
+
+      - name: Copy local docker-compose.prod.yml changes to target host
+        ansible.builtin.copy:
+            src: "{{ playbook_dir }}/../../../../../bitenex-api/docker-compose.prod.yml"
+            dest: "/opt/bitenex/repo/docker-compose.prod.yml"
+            owner: ubuntu
+            group: bitenex
+            mode: "0644"
 
       - name: Configure shared git repository permissions
         ansible.builtin.command:
