@@ -288,6 +288,7 @@ resource "aws_instance" "bitenex_compose_host" {
 resource "aws_ecr_repository" "bitenex_api" {
   name                 = var.ecr_api_repository_name
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -295,7 +296,8 @@ resource "aws_ecr_repository" "bitenex_api" {
 }
 
 resource "aws_s3_bucket" "admin_frontend" {
-  bucket = local.admin_bucket_name
+  bucket        = local.admin_bucket_name
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_public_access_block" "admin_frontend" {
