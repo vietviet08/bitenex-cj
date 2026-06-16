@@ -1,0 +1,352 @@
+{
+  "name": "WF-11-promotional-campaign-launcher",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/internal/campaigns/scheduled-today'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2e3603bd-03fd-4487-b713-89d7d75c035e",
+      "name": "Get Scheduled Campaigns",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1104,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and rate limit campaigns\nconst MAX_CAMPAIGNS = 100;\nconst campaigns = $input.all()[0].json.campaigns || [];\nconst validated = {\n  success: Array.isArray(campaigns) && campaigns.length > 0,\n  count: campaigns.length,\n  campaigns: campaigns.slice(0, MAX_CAMPAIGNS),\n  rate_limit: Math.ceil(1000 / Math.min(campaigns.length, 10)),\n  timestamp: new Date().toISOString()\n};\nif (!validated.success) {\n  throw new Error('No campaigns found');\n}\nreturn [validated];"
+      },
+      "id": "fcb09b4d-304d-48ca-8dc3-418040444168",
+      "name": "Validate & Rate Limit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "de1b75c6-11dd-431b-a7f4-6618d26dea84",
+      "name": "Loop Each Campaign",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -656,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/internal/segments/' + $json.segment_id + '/users'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "82703930-843a-4d08-ad69-4e5143b963fa",
+      "name": "Get Segment Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -432,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "8ce3f786-490e-48bf-975f-935fb0accfbd",
+      "name": "Loop Each User",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -208,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/notifications/send'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": {{JSON.stringify($json.user_id)}},\n  \"channel\": \"email\",\n  \"template\": {{JSON.stringify($node[\"Loop Each Campaign\"].json.email_template || 'promotional_email')}},\n  \"subject\": {{JSON.stringify($node[\"Loop Each Campaign\"].json.email_subject || '🎉 Special Offer')}},\n  \"properties\": {\n    \"campaign_id\": {{JSON.stringify($node[\"Loop Each Campaign\"].json.campaign_id)}},\n    \"promo_code\": {{JSON.stringify($node[\"Loop Each Campaign\"].json.promo_code)}}\n  },\n  \"dedupe_key\": \"promo_email_\" + {{JSON.stringify($json.user_id)}} + \"_\" + {{JSON.stringify($node[\"Loop Each Campaign\"].json.campaign_id)}}\n}",
+        "options": {}
+      },
+      "id": "b83030a1-6274-432e-9c88-66f13404f41f",
+      "name": "Send Email Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/notifications/send'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": {{JSON.stringify($json.user_id)}},\n  \"channel\": \"push\",\n  \"template\": {{JSON.stringify($node[\"Loop Each Campaign\"].json.push_template || 'promotional_push')}},\n  \"title\": \"🎉 Special Offer!\",\n  \"body\": \"Limited time only\",\n  \"properties\": {\n    \"campaign_id\": {{JSON.stringify($node[\"Loop Each Campaign\"].json.campaign_id)}},\n    \"promo_code\": {{JSON.stringify($node[\"Loop Each Campaign\"].json.promo_code)}}\n  },\n  \"dedupe_key\": \"promo_push_\" + {{JSON.stringify($json.user_id)}} + \"_\" + {{JSON.stringify($node[\"Loop Each Campaign\"].json.campaign_id)}}\n}",
+        "options": {}
+      },
+      "id": "6cf89445-35aa-43be-9155-8ff165513533",
+      "name": "Send Push Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/internal/events/track'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event_name\": \"campaign_sent\",\n  \"user_id\": {{JSON.stringify($json.user_id)}},\n  \"timestamp\": new Date().toISOString(),\n  \"properties\": {\n    \"campaign_id\": {{JSON.stringify($node[\"Loop Each Campaign\"].json.campaign_id)}},\n    \"segment_id\": {{JSON.stringify($node[\"Loop Each Campaign\"].json.segment_id)}}\n  }\n}",
+        "options": {}
+      },
+      "id": "48da9fe6-bea2-440c-8683-f20971753a79",
+      "name": "Track Campaign Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.BITENEX_API_BASE_URL || 'http://localhost:8000') + '/api/v1/internal/campaigns/' + $node[\"Loop Each Campaign\"].json.campaign_id + '/mark-sent'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + ($env.BITENEX_INTERNAL_API_TOKEN || 'token')}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"campaign_id\": {{JSON.stringify($node[\"Loop Each Campaign\"].json.campaign_id)}},\n  \"sent_at\": new Date().toISOString(),\n  \"total_recipients\": {{$json.length || 0}}\n}",
+        "options": {}
+      },
+      "id": "efce0dae-07ca-4fc4-85ff-94217667ac23",
+      "name": "Mark Campaign as Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -432,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      },
+      "id": "60b63d4d-d99f-4d3e-8a53-c42109c58686",
+      "name": "Schedule - Daily 10 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1328,
+        400
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Scheduled Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Validate & Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Loop Each Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Each Campaign": {
+      "main": [
+        [
+          {
+            "node": "Mark Campaign as Sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Segment Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Segment Users": {
+      "main": [
+        [
+          {
+            "node": "Loop Each User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Each User": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send Email Campaign",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Push Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Campaign": {
+      "main": [
+        [
+          {
+            "node": "Track Campaign Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Push Campaign": {
+      "main": [
+        [
+          {
+            "node": "Track Campaign Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Campaign Event": {
+      "main": [
+        [
+          {
+            "node": "Loop Each User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule - Daily 10 AM": {
+      "main": [
+        [
+          {
+            "node": "Get Scheduled Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7906bdae-2d67-431b-b15a-6f317cee2794",
+  "meta": {
+    "instanceId": "0196dd1049bd13c155e7b6b46fdaf472bff41b7a027b83a572a2f9483dea0a10"
+  },
+  "id": "lME1XaQfBPortSvj",
+  "tags": []
+}
